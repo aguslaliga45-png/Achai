@@ -146,11 +146,31 @@
     <div class="bg-white p-6 rounded-2xl w-full max-w-sm">
         <h3 class="text-lg font-bold mb-4">Entry Box Baru</h3>
         <input id="newBoxNumber" type="text" placeholder="Nomor Box (Contoh: B1)" class="w-full border p-3 rounded-lg mb-3">
-        <input id="newWeightIn" type="number" step="0.01" placeholder="Berat Masuk (Kg)" class="w-full border p-3 rounded-lg mb-4">
+        <input id="newWeightIn" type="number" step="0.01" placeholder="Berat Masuk (Kg)" class="w-full border p-3 rounded-lg mb-3">
+        
+        <!-- FITUR KAMERA / AMBIL FOTO -->
+        <div class="mb-4">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Foto Box / Ikan (Opsional)</label>
+            <input type="file" id="newPhotoInput" accept="image/*" capture="environment" class="hidden" onchange="previewImage(event)">
+            <button type="button" onclick="document.getElementById('newPhotoInput').click()" class="w-full border-2 border-dashed border-slate-300 p-3 rounded-lg flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-50">
+                <i class="fas fa-camera text-blue-600"></i>
+                <span id="photoStatusText" class="text-sm">Ambil Foto / Galeri</span>
+            </button>
+            <img id="photoPreview" class="hidden w-full h-32 object-cover rounded-lg mt-2 border">
+        </div>
+
         <div class="flex gap-2">
             <button onclick="closeModal('addModal')" class="w-1/2 bg-slate-100 py-3 rounded-lg font-medium text-slate-700">Batal</button>
             <button onclick="addEntryBox()" class="w-1/2 bg-[#0056e0] text-white py-3 rounded-lg font-medium">Simpan</button>
         </div>
+    </div>
+</div>
+
+<!-- MODAL: Preview Foto Besar -->
+<div id="imageModal" class="fixed inset-0 bg-black bg-opacity-80 z-[150] hidden items-center justify-center p-4" onclick="closeModal('imageModal')">
+    <div class="relative max-w-sm w-full">
+        <img id="modalImageDisplay" class="w-full h-auto rounded-xl shadow-lg">
+        <p class="text-white text-center text-xs mt-2">Ketuk di mana saja untuk menutup</p>
     </div>
 </div>
 
@@ -169,23 +189,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-database-compat.js"></script>
 
 <script>
-// OPTIONAL: Isi ini jika nanti ingin menghubungkan antar HP secara online via Firebase
-const firebaseConfig = {
-    // apiKey: "...",
-    // authDomain: "...",
-    // databaseURL: "...",
-    // projectId: "...",
-    // storageBucket: "...",
-    // messagingSenderId: "...",
-    // appId: "..."
-};
+const firebaseConfig = {};
 
 let db = null;
 let currentRoom = null;
 let currentData = { stock: {}, history: [] };
 let isOnlineMode = false;
+let currentBase64Image = "";
 
-// Cek apakah Firebase sudah dikonfigurasi
 if (typeof firebase !== "undefined" && firebaseConfig.apiKey) {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
@@ -238,7 +249,31 @@ function shareCode() {
 }
 
 // ------------------------------------------
-// PENGELOLAAN DATA (HYBRID: OFFLINE / ONLINE)
+// PROSES KAMERA & FOTO
+// ------------------------------------------
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            currentBase64Image = e.target.result;
+            const preview = document.getElementById('photoPreview');
+            preview.src = currentBase64Image;
+            preview.classList.remove('hidden');
+            document.getElementById('photoStatusText').innerText = "Foto Berhasil Dipilih";
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function showFullImage(src) {
+    if (!src) return;
+    document.getElementById('modalImageDisplay').src = src;
+    openModal('imageModal');
+}
+
+// ------------------------------------------
+// PENGELOLAAN DATA
 // ------------------------------------------
 function saveData() {
     if (isOnlineMode && db && currentRoom) {
@@ -311,18 +346,29 @@ function updateUI() {
                 filteredCount++;
                 let row = document.createElement('tr');
                 row.className = "border-b text-sm";
+                
+                // Tampilan Foto
+                let photoHtml = item.image 
+                    ? `<img src="${item.image}" onclick="showFullImage('${item.image}')" class="w-8 h-8 object-cover rounded-lg mx-auto cursor-pointer border">`
+                    : `<i class="fas fa-image text-slate-300 text-lg"></i>`;
+
                 row.innerHTML = `
                     <td class="py-3 font-medium text-slate-800">${item.boxNumber}</td>
-                    <td class="py-3"><i class="fas fa-image text-slate-300"></i></td>
+                    <td class="py-3">${photoHtml}</td>
                     <td class="py-3 text-sm text-[#0056e0] font-bold">${itemInKg.toFixed(3)} Kg</td>
-                    <td class="py-3">${item.isCut ? '<i class="fas fa-check text-yellow-500 font-bold"></i>' : ''}</td>
-                    <td class="py-3 text-sm text-red-600 font-bold">${itemOutKg.toFixed(3)} Kg</td>
+                    
+                    <!-- FITUR CEKLIS CUT -->
                     <td class="py-3">
-                        <div class="flex gap-1 justify-center">
-                            <button onclick="performAction('${id}', 'cut')" class="text-yellow-600 bg-yellow-50 p-2 rounded-lg ${item.isCut ? 'opacity-30' : ''}" ${item.isCut ? 'disabled' : ''}><i class="fas fa-cut"></i></button>
-                            <button onclick="performAction('${id}', 'out')" class="text-red-600 bg-red-50 p-2 rounded-lg ${itemOutKg > 0 ? 'opacity-30' : ''}" ${itemOutKg > 0 ? 'disabled' : ''}><i class="fas fa-box-open"></i></button>
-                            <button onclick="performAction('${id}', 'delete')" class="text-slate-400 p-2 rounded-lg hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
-                        </div>
+                        <input type="checkbox" ${item.isCut ? 'checked' : ''} onchange="toggleCut('${id}', this.checked)" class="w-5 h-5 accent-yellow-500 cursor-pointer">
+                    </td>
+                    
+                    <!-- FITUR CEKLIS OUT -->
+                    <td class="py-3">
+                        <input type="checkbox" ${itemOutKg > 0 ? 'checked' : ''} onchange="toggleOut('${id}', this.checked)" class="w-5 h-5 accent-red-600 cursor-pointer">
+                    </td>
+                    
+                    <td class="py-3">
+                        <button onclick="deleteEntry('${id}')" class="text-slate-400 p-2 rounded-lg hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -372,37 +418,57 @@ function addEntryBox() {
         weightIn: weightIn,
         isCut: false,
         weightOut: 0,
+        image: currentBase64Image,
         addedAt: new Date().toISOString()
     };
 
     addLog(`Tambah Box ${boxNum} (+${weightIn} Kg)`);
     saveData();
 
+    // Reset Form Modal
     closeModal('addModal');
     document.getElementById('newBoxNumber').value = '';
     document.getElementById('newWeightIn').value = '';
+    document.getElementById('newPhotoInput').value = '';
+    document.getElementById('photoPreview').classList.add('hidden');
+    document.getElementById('photoStatusText').innerText = "Ambil Foto / Galeri";
+    currentBase64Image = "";
 }
 
-function performAction(id, type) {
+// AKSI TOGGLE CUT DENGAN CEKLIS
+function toggleCut(id, isChecked) {
+    if (!currentData.stock[id]) return;
+    currentData.stock[id].isCut = isChecked;
+    if (isChecked) {
+        addLog(`CUT Box ${currentData.stock[id].boxNumber}`);
+    } else {
+        addLog(`Batal CUT Box ${currentData.stock[id].boxNumber}`);
+    }
+    saveData();
+}
+
+// AKSI TOGGLE OUT DENGAN CEKLIS
+function toggleOut(id, isChecked) {
     if (!currentData.stock[id]) return;
     const item = currentData.stock[id];
-
-    if (type === 'cut') {
-        item.isCut = true;
-        addLog(`CUT Box ${item.boxNumber}`);
-    } else if (type === 'out') {
+    if (isChecked) {
         item.weightOut = item.weightIn;
         addLog(`OUT Box ${item.boxNumber} (-${item.weightIn} Kg)`);
-    } else if (type === 'delete') {
-        if (confirm(`Hapus data Box ${item.boxNumber}?`)) {
-            addLog(`Hapus Box ${item.boxNumber}`);
-            delete currentData.stock[id];
-        } else {
-            return;
-        }
+    } else {
+        item.weightOut = 0;
+        addLog(`Batal OUT Box ${item.boxNumber}`);
     }
-
     saveData();
+}
+
+function deleteEntry(id) {
+    if (!currentData.stock[id]) return;
+    const item = currentData.stock[id];
+    if (confirm(`Hapus data Box ${item.boxNumber}?`)) {
+        addLog(`Hapus Box ${item.boxNumber}`);
+        delete currentData.stock[id];
+        saveData();
+    }
 }
 
 function addLog(desc) {
@@ -431,4 +497,4 @@ function closeModal(modalId) {
 </script>
 
 </body>
-    </html>
+</html>
