@@ -10,16 +10,25 @@
 <!-- Modal Tambah Entry Box -->
 <div id="addModal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4"><div class="glass rounded-2xl p-5 w-full max-w-md"><h3 class="text-xl font-bold mb-4">Tambah Entry Box</h3><input id="newBoxNumber" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 mb-3" placeholder="Nomor Box (contoh B1)"><input id="newWeightIn" type="number" min="0.001" step="0.001" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 mb-3" placeholder="Berat Masuk (Kg)">
 
-<!-- Single Input Kompatibel WebView & Web (Tanpa atribut capture) -->
+<!-- Input Tersembunyi: Kamera langsung & Galeri -->
+<input id="newCameraInput" type="file" accept="image/*" capture="environment" class="hidden">
 <input id="newPhotoInput" type="file" accept="image/*" class="hidden">
 
-<button type="button" onclick="triggerFileInput('newPhotoInput')" class="btn w-full p-3 mb-2 flex items-center justify-center gap-2">
-  <i class="fas fa-camera blue"></i> <span id="photoStatus">Ambil Foto / Galeri</span>
-</button>
+<!-- Tombol Pilihan Media Tambah Box -->
+<div class="grid grid-cols-2 gap-2 mb-2">
+  <button type="button" onclick="triggerFileInput('newCameraInput')" class="btn p-3 flex items-center justify-center gap-2 green">
+    <i class="fas fa-camera"></i> <span>Buka Kamera</span>
+  </button>
+  <button type="button" onclick="triggerFileInput('newPhotoInput')" class="btn p-3 flex items-center justify-center gap-2 blue">
+    <i class="fas fa-images"></i> <span>Galeri / File</span>
+  </button>
+</div>
+<p id="photoStatus" class="text-xs text-center text-slate-400 mb-2">Belum ada foto terpilih</p>
 
 <img id="photoPreview" class="hidden w-full h-40 object-cover rounded-xl mb-3"><div class="grid grid-cols-2 gap-2"><button onclick="closeModal('addModal')" class="btn py-3">Batal</button><button onclick="addEntryBox()" class="bg-blue-600 rounded-xl py-3 font-bold">Simpan</button></div></div></div>
 
-<!-- Input File Terpisah Khusus Update Foto Box (Kompatibel WebView) -->
+<!-- Input File Terpisah Khusus Update Foto Box (Kamera & File) -->
+<input id="editCameraInput" type="file" accept="image/*" capture="environment" class="hidden">
 <input id="editPhotoInput" type="file" accept="image/*" class="hidden">
 
 <div id="imageModal" class="fixed inset-0 bg-black/90 z-[120] hidden items-center justify-center p-4" onclick="closeModal('imageModal')"><img id="modalImage" class="max-w-full max-h-[90vh] rounded-xl"></div>
@@ -28,7 +37,7 @@
 const firebaseConfig={apiKey:"AIzaSyDWs5wLuhewr-5LqhM882x98qG8DrIvpgc",authDomain:"acai-cf0b8.firebaseapp.com",databaseURL:"https://acai-cf0b8-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"acai-cf0b8",storageBucket:"acai-cf0b8.firebasestorage.app",messagingSenderId:"735224898858",appId:"1:735224898858:web:5b597c7e19c86ee9162a53",measurementId:"G-YD77RP6BPE"};
 let db=null,currentRoom=null,currentData={stock:{},history:[]},currentBase64Image="",photoTarget=null;try{firebase.initializeApp(firebaseConfig);db=firebase.database()}catch(e){console.error(e)}
 const $=id=>document.getElementById(id);function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-3xl w-12 text-center":"red text-3xl w-12 text-center"}function roomPath(){return "rooms/"+currentRoom}function showLoginError(m){$("loginError").textContent=m;$("loginError").classList.remove("hidden")}function joinRoom(){const code=$("loginRoomCode").value.trim().toUpperCase();if(!code)return showLoginError("Masukkan kode toko terlebih dahulu.");if(!db)return showLoginError("Firebase gagal dimuat.");currentRoom=code;localStorage.setItem("fishStoreRoomCode",code);$("roomCodeInput2").value=code;$("roomDisplay").textContent=code;subscribe()}function saveRoomCode(){const c=$("roomCodeInput2").value.trim().toUpperCase();if(!c)return alert("Kode toko tidak boleh kosong.");currentRoom=c;localStorage.setItem("fishStoreRoomCode",c);$("loginRoomCode").value=c;$("roomDisplay").textContent=c;subscribe()}function subscribe(){if(!db||!currentRoom)return setStatus("Firebase/Kode toko error",false);setStatus("Menghubungkan...",false);db.ref(roomPath()).off();db.ref(roomPath()).on("value",s=>{currentData=s.val()||{};currentData.stock=currentData.stock||{};currentData.history=Array.isArray(currentData.history)?currentData.history:[];$("loginModal").style.display="none";refreshUI();setStatus("Realtime",true)},e=>{console.error(e);setStatus("Database Error",false);showLoginError("Database: "+(e.code||e.message));$("loginModal").style.display="flex"})}function saveData(){if(!db||!currentRoom)return alert("Belum terhubung ke toko.");db.ref(roomPath()).set(currentData).catch(e=>{setStatus("Gagal menyimpan",false);alert("Gagal menyimpan: "+e.message)})}function makeLog(desc,type,box,qty){currentData.history.push({desc,type,boxNumber:box,quantity:Number(qty)||0,timestamp:new Date().toISOString()});if(currentData.history.length>1000)currentData.history=currentData.history.slice(-1000)}function formatDateTime(x){const d=new Date(x);return isNaN(d)?"-":d.toLocaleString("id-ID",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"})}
-function compressImage(u,cb){const i=new Image();i.onload=()=>{const m=900,s=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.max(1,i.width*s);c.height=Math.max(1,i.height*s);c.getContext("2d").drawImage(i,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.72))};i.onerror=()=>cb(u);i.src=u}function addEntryBox(){const b=$("newBoxNumber").value.trim().toUpperCase(),kg=parseFloat($("newWeightIn").value);if(!currentRoom)return alert("Masuk ke kode toko terlebih dahulu.");if(!b||!Number.isFinite(kg)||kg<=0)return alert("Isi Nomor Box dan Berat Masuk dengan benar.");const id="box_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),finish=p=>{currentData.stock[id]={boxNumber:b,weightIn:kg,weightOut:0,isCut:false,image:p||"",addedAt:new Date().toISOString()};makeLog("Tambah Box "+b+" (+"+kg.toFixed(3)+" Kg)","MASUK",b,kg);saveData();resetAdd();closeModal("addModal")};currentBase64Image?compressImage(currentBase64Image,finish):finish("")}function resetAdd(){$("newBoxNumber").value="";$("newWeightIn").value="";$("newPhotoInput").value="";$("photoPreview").classList.add("hidden");$("photoStatus").textContent="Ambil Foto / Galeri";currentBase64Image=""}function toggleCut(id,c){const x=currentData.stock?.[id];if(!x)return;x.isCut=!!c;makeLog((c?"CUT ":"Batal CUT ")+x.boxNumber,c?"CUT":"BATAL",x.boxNumber,x.weightIn);saveData()}function toggleOut(id,c){const x=currentData.stock?.[id];if(!x)return;x.weightOut=c?Number(x.weightIn):0;makeLog((c?"OUT ":"Batal OUT ")+x.boxNumber,c?"OUT":"BATAL",x.boxNumber,c?x.weightIn:0);saveData()}function deleteEntry(id){const x=currentData.stock?.[id];if(!x||!confirm("Hapus data Box "+x.boxNumber+"?"))return;makeLog("Hapus Box "+x.boxNumber,"HAPUS",x.boxNumber,x.weightIn);delete currentData.stock[id];saveData()}
+function compressImage(u,cb){const i=new Image();i.onload=()=>{const m=900,s=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.max(1,i.width*s);c.height=Math.max(1,i.height*s);c.getContext("2d").drawImage(i,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.72))};i.onerror=()=>cb(u);i.src=u}function addEntryBox(){const b=$("newBoxNumber").value.trim().toUpperCase(),kg=parseFloat($("newWeightIn").value);if(!currentRoom)return alert("Masuk ke kode toko terlebih dahulu.");if(!b||!Number.isFinite(kg)||kg<=0)return alert("Isi Nomor Box dan Berat Masuk dengan benar.");const id="box_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),finish=p=>{currentData.stock[id]={boxNumber:b,weightIn:kg,weightOut:0,isCut:false,image:p||"",addedAt:new Date().toISOString()};makeLog("Tambah Box "+b+" (+"+kg.toFixed(3)+" Kg)","MASUK",b,kg);saveData();resetAdd();closeModal("addModal")};currentBase64Image?compressImage(currentBase64Image,finish):finish("")}function resetAdd(){$("newBoxNumber").value="";$("newWeightIn").value="";$("newPhotoInput").value="";$("newCameraInput").value="";$("photoPreview").classList.add("hidden");$("photoStatus").textContent="Belum ada foto terpilih";currentBase64Image=""}function toggleCut(id,c){const x=currentData.stock?.[id];if(!x)return;x.isCut=!!c;makeLog((c?"CUT ":"Batal CUT ")+x.boxNumber,c?"CUT":"BATAL",x.boxNumber,x.weightIn);saveData()}function toggleOut(id,c){const x=currentData.stock?.[id];if(!x)return;x.weightOut=c?Number(x.weightIn):0;makeLog((c?"OUT ":"Batal OUT ")+x.boxNumber,c?"OUT":"BATAL",x.boxNumber,c?x.weightIn:0);saveData()}function deleteEntry(id){const x=currentData.stock?.[id];if(!x||!confirm("Hapus data Box "+x.boxNumber+"?"))return;makeLog("Hapus Box "+x.boxNumber,"HAPUS",x.boxNumber,x.weightIn);delete currentData.stock[id];saveData()}
 function refreshUI(){let ti=0,to=0,count=0;const list=$("stockList"),q=$("searchInput").value.trim().toLowerCase();list.innerHTML="";Object.entries(currentData.stock||{}).forEach(([id,x])=>{if(!x?.boxNumber)return;count++;ti+=+x.weightIn||0;to+=+x.weightOut||0;if(q&&!x.boxNumber.toLowerCase().includes(q))return;const d=document.createElement("div");d.className="glass rounded-2xl p-3 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center";const p=x.image?`<img src="${x.image}" onclick="showImage('${encodeURIComponent(x.image)}')" class="fish-photo w-full sm:w-32 h-28 object-cover rounded-xl cursor-pointer">`:`<div class="fish-photo w-full sm:w-32 h-28 rounded-xl bg-[#07121d] flex items-center justify-center text-slate-600 text-3xl"><i class="fas fa-image"></i></div>`;d.innerHTML=`<div class="sm:w-32 shrink-0">${p}</div><div class="flex-1 min-w-0"><div class="text-lg font-bold">${esc(x.boxNumber)}</div><div class="text-slate-300">Stok: <b class="yellow">${Math.max(0,(+x.weightIn||0)- (+x.weightOut||0)).toFixed(3)}</b> Kg</div><div class="flex gap-2 mt-2 flex-wrap"><span class="bg-blue-950/60 border border-blue-800 rounded-lg px-2 py-1 text-xs blue">Masuk: ${( +x.weightIn||0).toFixed(3)} Kg</span><span class="bg-red-950/60 border border-red-800 rounded-lg px-2 py-1 text-xs red">Keluar: ${( +x.weightOut||0).toFixed(3)} Kg</span></div></div><div class="fish-actions sm:w-44 grid grid-cols-2 gap-2"><button onclick="toggleCut('${id}',${!x.isCut})" class="rounded-lg py-2 border border-green-600 font-bold green">⬇ ${x.isCut?"CUT ✓":"CUT"}</button><button onclick="toggleOut('${id}',${(+x.weightOut||0)<=0})" class="rounded-lg py-2 border border-red-600 font-bold red">⬆ ${+x.weightOut>0?"OUT ✓":"OUT"}</button><button onclick="choosePhotoFor('${id}')" class="rounded-lg py-2 border border-blue-600 text-blue-300"><i class="fas fa-camera"></i></button><button onclick="deleteEntry('${id}')" class="rounded-lg py-2 border border-slate-700 text-slate-400"><i class="fas fa-trash"></i></button></div>`;list.appendChild(d)});$("emptyStock").classList.toggle("hidden",count!==0);$("totalBox").textContent=count;$("totalIn").textContent=ti.toFixed(3);$("totalOut").textContent=to.toFixed(3);$("stokKg").textContent=Math.max(0,ti-to).toFixed(3);renderHistory()}
 
 // Fungsi pemicu input yang aman untuk WebView
@@ -40,29 +49,37 @@ function triggerFileInput(inputId) {
   }
 }
 
-// Penanganan Pilihan Foto Tambah Box
-$("newPhotoInput").addEventListener("change", e => {
-  const f = e.target.files?.[0];
-  if (!f) return;
+// Handler Pembaca File Gambar
+function handleFileSelect(file) {
+  if (!file) return;
   const r = new FileReader();
   r.onload = v => {
     currentBase64Image = v.target.result;
     $("photoPreview").src = currentBase64Image;
     $("photoPreview").classList.remove("hidden");
-    $("photoStatus").textContent = "Foto berhasil dipilih";
+    $("photoStatus").textContent = "Foto berhasil diambil / dipilih";
   };
-  r.readAsDataURL(f);
-});
-
-// Penanganan Update Foto Item Box
-function choosePhotoFor(id) {
-  photoTarget = id;
-  triggerFileInput("editPhotoInput");
+  r.readAsDataURL(file);
 }
 
-$("editPhotoInput").addEventListener("change", e => {
-  const f = e.target.files?.[0];
-  if (!f || !photoTarget) return;
+// Listener Kamera & Galeri pada Tambah Box
+$("newCameraInput").addEventListener("change", e => handleFileSelect(e.target.files?.[0]));
+$("newPhotoInput").addEventListener("change", e => handleFileSelect(e.target.files?.[0]));
+
+// Penanganan Update Foto Item Box (Kamera / Galeri)
+function choosePhotoFor(id) {
+  photoTarget = id;
+  // Membuka pilihan Kamera/Galeri pada update foto item
+  const useCam = confirm("Pilih OK untuk Buka Kamera, atau Cancel untuk Buka Galeri/File");
+  if (useCam) {
+    triggerFileInput("editCameraInput");
+  } else {
+    triggerFileInput("editPhotoInput");
+  }
+}
+
+function handleEditPhotoSelect(file) {
+  if (!file || !photoTarget) return;
   const r = new FileReader();
   r.onload = v => {
     compressImage(v.target.result, p => {
@@ -73,11 +90,12 @@ $("editPhotoInput").addEventListener("change", e => {
         saveData();
       }
       photoTarget = null;
-      e.target.value = "";
     });
   };
-  r.readAsDataURL(f);
-});
+  r.readAsDataURL(file);
+}
 
-function renderHistory(){const list=$("historyList"),f=$("historyDate").value;list.innerHTML="";const a=(currentData.history||[]).filter(x=>!f||String(x.timestamp).slice(0,10)===f).slice().reverse();$("emptyHistory").classList.toggle("hidden",a.length!==0);a.forEach(x=>{const d=document.createElement("div");d.className="history-row grid grid-cols-5 gap-2 px-3 py-3 border-t border-[#1b2d3d] text-xs sm:text-sm";d.innerHTML=`<div class="text-slate-300">${esc(formatDateTime(x.timestamp))}</div><div class="font-semibold">${esc(x.boxNumber||"-")}</div><div><span class="px-2 py-1 rounded-md ${x.type==='OUT'?'bg-red-900/50 red':'bg-green-900/50 green'} border border-current">${esc(x.type||'INFO')}</span></div><div>${(+x.quantity||0).toFixed(3)} Kg</div><div class="text-slate-400">${esc(x.desc||"")}</div>`;list.appendChild(d)})}function clearHistory(){if(!confirm("Hapus semua histori transaksi?"))return;currentData.history=[];saveData()}function showImage(e){$("modalImage").src=decodeURIComponent(e);openModal("imageModal")}function openModal(id){$(id).style.display="flex"}function closeModal(id){if(id==='addModal')resetAdd();$(id).style.display="none"}function goTo(id){$(id).scrollIntoView({behavior:"smooth",block:"start"})}function showAbout(){alert("STORE IKAN\nCatatan Stok Realtime\nData tersimpan melalui Firebase Realtime Database.")}function shareCode(){if(!currentRoom)return;const t="Gunakan kode toko: "+currentRoom;if(navigator.share)navigator.share({title:"STORE IKAN",text:t,url:location.href}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert("Kode toko disalin: "+currentRoom));else alert(t)}function toggleMenu(){alert("STORE IKAN\nGunakan navigasi bawah untuk Stok, Histori, Kode Toko, dan Tentang.")}$("historyDate").addEventListener("change",renderHistory);$("searchInput").addEventListener("input",refreshUI);$("loginRoomCode").addEventListener("keydown",e=>{if(e.key==='Enter')joinRoom()});window.addEventListener("load",()=>{const s=localStorage.getItem("fishStoreRoomCode");if(s){$("loginRoomCode").value=s;joinRoom()}else $("loginModal").style.display="flex"});window.addEventListener("online",()=>$("deviceText").textContent="Online");window.addEventListener("offline",()=>{$("deviceText").textContent="Offline";setStatus("Internet terputus",false)});
-</script></body></html>
+$("editCameraInput").addEventListener("change", e => handleEditPhotoSelect(e.target.files?.[0]));
+$("editPhotoInput").addEventListener("change", e => handleEditPhotoSelect(e.target.files?.[0]));
+
+function renderHistory(){const list=$("historyList"),f=$("historyDate").value;list.innerHTML="";const a=(currentData.history||[]).filter(x=>!f||String(x.timestamp).slice(0,10)===f).slice().reverse();$("emptyHistory").classList.toggle("hidden",a.length!==0);a.forEach(x=>{const d=document.createElement("div");d.className="history-row grid grid-cols-5 gap-2 px-3 py-3 border-t border-[#1b2d3d] text-xs sm:text-sm";d.innerHTML=`<div class="text-slate-300">${esc(formatDateTime(x.timestamp))}</div><div class="font-semibold">${esc(x.boxNumber||"-")}</div><div><span class="px-2 py-1 rounded-md ${x.type==='OUT'?'bg-red-900/50 red':'bg-green-900/50 green'} border border-current">${esc(x.type||'INFO')}</span></div><div>${(+x.quantity||0).toFixed(3)} Kg</div><div class="text-slate-400">${esc(x.desc||"")}</div>`;list.appendChild(d)})}function clearHistory(){if(!confirm("Hapus semua histori transaksi?"))return;currentData.history=[];saveData()}function showImage(e){$("modalImage").src=decodeURIComponent(e);openModal("imageModal")}function openModal(id){$(id).style.display="flex"}function closeModal(id){if(id==='addModal')resetAdd();$(id).style.display="none"}function goTo(id){$(id).scrollIntoView({behavior:"smooth",block:"start"})}function showAbout(){alert("STORE IKAN\nCatatan Stok Realtime\nData tersimpan melalui Firebase Realtime Database.")}function shareCode(){if(!currentRoom)return;const t="Gunakan kode toko: "+currentRoom;if(navigator.share)navigator.share({title:"STORE IKAN",text:t,url:location.href}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t).the
