@@ -3,436 +3,451 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORE IKAN - Stok & Pemotongan Realtime</title>
-    <!-- Tailwind CSS CDN -->
+    <title>STORE IKAN - Stok Realtime</title>
+    <!-- Tailwind CSS CDN untuk desain cepat -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- FontAwesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #f4f7fe; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card-shadow { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
+        body { background-color: #f3f7fa; font-family: sans-serif; }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
+        .dashboard-container { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
     </style>
 </head>
-<body class="max-w-md mx-auto min-h-screen bg-gray-50 flex flex-col justify-between pb-10">
+<body>
 
-    <div>
-        <!-- Top App Bar -->
-        <div class="bg-gray-900 text-white px-4 py-2 flex justify-between items-center text-sm">
-            <div class="flex items-center gap-2">
-                <span class="font-bold border-b-2 border-cyan-400 pb-0.5">Bangheng</span>
-                <button class="text-cyan-400 text-lg font-bold">+</button>
+<div class="dashboard-container">
+    <!-- 1. Top App Bar -->
+    <div class="bg-[#0056e0] text-white p-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="bg-white p-1 rounded-full text-[#0056e0] text-2xl w-10 h-10 flex items-center justify-center">
+                <i class="fas fa-fish"></i>
             </div>
-            <div class="flex gap-4 text-cyan-400 text-lg">
-                <i class="fa-solid me-2 fa-share-nodes"></i>
-                <i class="fa-solid fa-bell"></i>
-            </div>
-        </div>
-
-        <!-- Banner Header -->
-        <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-full bg-cyan-400 flex items-center justify-center text-blue-900 text-2xl">
-                    <i class="fa-solid fa-fish"></i>
-                </div>
-                <div>
-                    <h1 class="font-extrabold text-lg leading-tight">STORE IKAN</h1>
-                    <p class="text-xs text-blue-100">Stok & Pemotongan Realtime</p>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="resetData()" class="bg-blue-800 text-xs px-3 py-2 rounded-lg flex flex-col items-center justify-center hover:bg-blue-900">
-                    <i class="fa-solid fa-power-off text-sm"></i>
-                    <span>Keluar</span>
-                </button>
-                <button onclick="bagikanKode()" class="bg-cyan-400 text-blue-900 font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1 hover:bg-cyan-300">
-                    <i class="fa-solid fa-share-nodes"></i> Bagikan Kode
-                </button>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight">STORE IKAN</h1>
+                <p class="text-xs opacity-90">Stok & Pemotongan Realtime</p>
             </div>
         </div>
-
-        <!-- Main Content Wrapper -->
-        <div class="p-4 space-y-4">
-            
-            <!-- Room & Status Indicator -->
-            <div class="bg-white p-3 rounded-2xl card-shadow flex justify-between items-center text-xs font-semibold">
-                <div class="flex items-center gap-2 text-gray-700">
-                    <i class="fa-solid fa-store text-blue-600 text-base"></i>
-                    <span>Kode Terhubung:</span>
-                    <span id="roomCode" class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">2</span>
-                </div>
-                <div class="flex items-center gap-1.5 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
-                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    <span>Online Realtime</span>
-                </div>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-2 gap-3">
-                <!-- Total Box -->
-                <div class="bg-white p-3 rounded-2xl border border-gray-100 text-center card-shadow">
-                    <p class="text-xs text-gray-500 font-medium">Total Box</p>
-                    <p id="statTotalBox" class="text-2xl font-bold text-gray-800 mt-1">0</p>
-                </div>
-                <!-- Total IN -->
-                <div class="bg-white p-3 rounded-2xl border border-blue-100 text-center card-shadow">
-                    <p class="text-xs text-blue-500 font-medium">Total IN</p>
-                    <p id="statTotalIn" class="text-2xl font-bold text-blue-600 mt-1">0.000 Kg</p>
-                </div>
-                <!-- Di-CUT -->
-                <div class="bg-white p-3 rounded-2xl border border-yellow-100 text-center card-shadow">
-                    <p class="text-xs text-yellow-600 font-medium">Di-CUT</p>
-                    <p id="statTotalCut" class="text-2xl font-bold text-yellow-500 mt-1">0 Box</p>
-                </div>
-                <!-- Total OUT -->
-                <div class="bg-white p-3 rounded-2xl border border-red-100 text-center card-shadow">
-                    <p class="text-xs text-red-400 font-medium">Total OUT</p>
-                    <p id="statTotalOut" class="text-2xl font-bold text-red-500 mt-1">0.000 Kg</p>
-                </div>
-            </div>
-
-            <!-- Stok Tersedia -->
-            <div class="bg-white p-4 rounded-2xl border border-emerald-100 text-center card-shadow">
-                <p class="text-xs text-emerald-600 font-semibold">Stok Tersedia</p>
-                <p id="statStokTersedia" class="text-3xl font-extrabold text-emerald-500 mt-1">0.000 Kg</p>
-            </div>
-
-            <!-- Search & Action Button -->
-            <div class="space-y-3">
-                <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-gray-400"></i>
-                    <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari No. Box..." class="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <button onclick="openModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 text-sm">
-                    <i class="fa-solid fa-plus"></i> Tambah Entry Box
-                </button>
-            </div>
-
-            <!-- Tabel Stok Realtime -->
-            <div class="bg-white rounded-2xl p-4 card-shadow border border-gray-100">
-                <div class="flex justify-between items-center mb-3">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-table-cells text-blue-600"></i>
-                        <h2 class="font-bold text-gray-800 text-sm">Tabel Stok Realtime</h2>
-                    </div>
-                    <span id="dataCount" class="bg-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-full font-semibold">0 Data</span>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left">
-                        <thead class="bg-gray-50 text-gray-500 uppercase border-b">
-                            <tr>
-                                <th class="p-2">NO</th>
-                                <th class="p-2">FOTO</th>
-                                <th class="p-2">IN (KG)</th>
-                                <th class="p-2">CUT</th>
-                                <th class="p-2">OUT</th>
-                                <th class="p-2 text-center">AKSI</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stockTableBody">
-                            <!-- Data akan diisi JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Section Histori Transaksi -->
-            <div class="bg-white rounded-2xl p-4 card-shadow border border-gray-100">
-                <div class="flex justify-between items-center mb-3">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-clock-rotate-left text-blue-600"></i>
-                        <h2 class="font-bold text-gray-800 text-sm">Histori Transaksi</h2>
-                    </div>
-                    <button onclick="clearHistory()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded-lg font-semibold flex items-center gap-1">
-                        <i class="fa-solid fa-trash-can"></i> Hapus Histori
-                    </button>
-                </div>
-                <div id="historyList" class="space-y-2 text-xs max-h-40 overflow-y-auto pr-1">
-                    <p class="text-center text-gray-400 py-2">Belum ada riwayat transaksi.</p>
-                </div>
-            </div>
-
+        <div class="flex gap-2">
+            <button onclick="logout()" class="flex flex-col items-center bg-[#0047b3] p-2 rounded-lg text-xs w-16">
+                <i class="fas fa-power-off text-base mb-1"></i>
+                Keluar
+            </button>
+            <button onclick="shareCode()" class="flex flex-col items-center bg-[#1ac5ff] p-2 rounded-lg text-xs w-16 text-black">
+                <i class="fas fa-share-alt text-base mb-1"></i>
+                Bagikan Kode
+            </button>
         </div>
     </div>
 
-    <!-- Modal Input Entry Box -->
-    <div id="entryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-4">
-            <h3 class="font-bold text-gray-800 text-base">Tambah Entry Box Ikan</h3>
+    <div class="p-4 flex-grow flex flex-col gap-4">
+        <!-- 2. Status Bar -->
+        <div class="bg-white p-3 rounded-xl card-shadow flex items-center justify-between">
+            <div class="flex items-center gap-2 text-sm text-slate-600">
+                <i class="fas fa-home"></i>
+                <span>Kode Terhubung:</span>
+                <span id="roomCodeDisplay" class="bg-blue-100 text-[#0056e0] font-bold px-2 py-0.5 rounded-full text-xs">?</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                <div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                Online Realtime
+            </div>
+        </div>
+
+        <!-- 3. Dashboard Ringkasan -->
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white p-4 rounded-xl card-shadow text-center">
+                <p class="text-xs text-slate-500 mb-1">Total Box</p>
+                <p id="totalBox" class="text-3xl font-bold text-slate-800">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl card-shadow text-center border-t-2 border-blue-400">
+                <p class="text-xs text-slate-500 mb-1">Total IN</p>
+                <p id="totalIN" class="text-2xl font-bold text-[#0056e0]">0.000 Kg</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl card-shadow text-center border-t-2 border-yellow-400">
+                <p class="text-xs text-slate-500 mb-1">Di-CUT</p>
+                <p id="totalCUT" class="text-xl font-bold text-yellow-600">0 Box</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl card-shadow text-center border-t-2 border-red-400">
+                <p class="text-xs text-slate-500 mb-1">Total OUT</p>
+                <p id="totalOUT" class="text-2xl font-bold text-red-600">0.000 Kg</p>
+            </div>
+        </div>
+        
+        <!-- 4. Stok Tersedia -->
+        <div class="bg-white p-5 rounded-xl card-shadow text-center">
+            <p class="text-xs text-slate-500 mb-1">Stok Tersedia</p>
+            <p id="stokTersedia" class="text-3xl font-bold text-green-600">0.000 Kg</p>
+        </div>
+
+        <!-- 5. Pencarian & Tombol Tambah -->
+        <div class="bg-white rounded-full card-shadow flex items-center px-4 py-3 gap-3">
+            <i class="fas fa-search text-slate-400"></i>
+            <input id="searchInput" type="text" placeholder="Cari No. Box..." class="flex-grow text-sm outline-none bg-transparent">
+        </div>
+        
+        <button onclick="openModal('addModal')" class="bg-[#0056e0] text-white py-3.5 rounded-xl font-medium w-full flex items-center justify-center gap-2 hover:bg-blue-700 transition card-shadow">
+            <i class="fas fa-plus"></i>
+            Tambah Entry Box
+        </button>
+
+        <!-- 6. Tabel Stok Realtime -->
+        <div class="bg-white p-4 rounded-xl card-shadow flex-grow">
+            <div class="flex items-center justify-between mb-4 border-b pb-3">
+                <div class="flex items-center gap-2 font-semibold text-slate-800 text-sm">
+                    <i class="fas fa-table text-[#0056e0]"></i>
+                    Tabel Stok Realtime
+                </div>
+                <span id="dataCount" class="text-xs bg-slate-100 px-2.5 py-1 rounded-full text-slate-600">0 Data</span>
+            </div>
             
-            <form id="entryForm" onsubmit="saveEntry(event)" class="space-y-3">
-                <div>
-                    <label class="text-xs text-gray-600 font-semibold block mb-1">Nomor Box</label>
-                    <input type="text" id="boxNum" required placeholder="Contoh: BOX-01" class="w-full border rounded-lg p-2 text-xs">
-                </div>
-                <div class="grid grid-cols-3 gap-2">
-                    <div>
-                        <label class="text-xs text-gray-600 font-semibold block mb-1">IN (Kg)</label>
-                        <input type="number" step="0.001" id="inKg" required placeholder="0.000" class="w-full border rounded-lg p-2 text-xs">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-600 font-semibold block mb-1">Di-CUT</label>
-                        <select id="isCut" class="w-full border rounded-lg p-2 text-xs">
-                            <option value="Ya">Ya</option>
-                            <option value="Tidak" selected>Tidak</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-600 font-semibold block mb-1">OUT (Kg)</label>
-                        <input type="number" step="0.001" id="outKg" value="0" class="w-full border rounded-lg p-2 text-xs">
-                    </div>
-                </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-center text-sm" id="stockTable">
+                    <thead>
+                        <tr class="text-xs text-slate-400 uppercase font-medium border-b">
+                            <th class="py-2">No</th>
+                            <th class="py-2">Foto</th>
+                            <th class="py-2">IN (KG)</th>
+                            <th class="py-2">CUT</th>
+                            <th class="py-2">OUT</th>
+                            <th class="py-2">AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockTableBody">
+                        <!-- Data akan diisi oleh JavaScript -->
+                        <tr id="noDataPlaceholder">
+                            <td colspan="6" class="py-12 text-slate-400 italic">Belum ada data barang.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-                <!-- Input Foto Kamera -->
-                <div>
-                    <label class="text-xs text-gray-600 font-semibold block mb-1">Foto Ikan / Box</label>
-                    <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="previewImage(event)" class="w-full border rounded-lg p-1.5 text-xs">
-                    <div id="imagePreviewContainer" class="mt-2 hidden">
-                        <img id="imagePreview" src="" class="w-20 h-20 object-cover rounded-lg border">
-                    </div>
+        <!-- 7. Histori Transaksi -->
+        <div class="bg-white p-4 rounded-xl card-shadow mb-4">
+            <div class="flex items-center justify-between mb-3 border-b pb-3">
+                <div class="flex items-center gap-2 font-semibold text-slate-800 text-sm">
+                    <i class="fas fa-history text-[#0056e0]"></i>
+                    Histori Transaksi
                 </div>
-
-                <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="closeModal()" class="w-1/2 bg-gray-200 text-gray-700 py-2 rounded-lg text-xs font-semibold">Batal</button>
-                    <button type="submit" class="w-1/2 bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold">Simpan Data</button>
-                </div>
-            </form>
+                <button onclick="clearHistory()" class="text-xs text-red-600 font-medium flex items-center gap-1.5 hover:text-red-800">
+                    <i class="fas fa-trash-alt"></i>
+                    Hapus Histori
+                </button>
+            </div>
+            <div id="historyList" class="text-sm text-slate-500 max-h-48 overflow-y-auto space-y-2">
+                Belum ada riwayat transaksi.
+            </div>
         </div>
     </div>
+</div>
 
-    <!-- Firebase SDK Modules -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+<!-- ============================ -->
+<!-- MODAL: Tambah Entry Box -->
+<!-- ============================ -->
+<div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-2xl w-full max-w-sm">
+        <h3 class="text-lg font-bold mb-4">Entry Box Baru</h3>
+        <input id="newBoxNumber" type="text" placeholder="Nomor Box (Contoh: B1)" class="w-full border p-3 rounded-lg mb-3">
+        <input id="newWeightIn" type="number" step="0.01" placeholder="Berat Masuk (Kg)" class="w-full border p-3 rounded-lg mb-4">
+        <div class="flex gap-2">
+            <button onclick="closeModal('addModal')" class="w-1/2 bg-slate-100 py-3 rounded-lg font-medium text-slate-700">Batal</button>
+            <button onclick="addEntryBox()" class="w-1/2 bg-[#0056e0] text-white py-3 rounded-lg font-medium">Simpan</button>
+        </div>
+    </div>
+</div>
 
-        // CONFIG FIREBASE (Ganti dengan Config milik Anda untuk Online antar HP)
-        const firebaseConfig = {
-            apiKey: "AIzaSyYOUR_KEY_HERE",
-            authDomain: "your-app.firebaseapp.com",
-            projectId: "your-app-id",
-            storageBucket: "your-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
-        };
+<!-- ============================ -->
+<!-- MODAL: Login/Create Room -->
+<!-- ============================ -->
+<div id="loginModal" class="fixed inset-0 bg-[#0056e0] text-white z-[200] flex flex-col items-center justify-center p-8 text-center">
+    <div class="bg-white p-1.5 rounded-full text-[#0056e0] text-5xl w-24 h-24 flex items-center justify-center mb-6">
+        <i class="fas fa-fish"></i>
+    </div>
+    <h2 class="text-2xl font-bold mb-6">Selamat Datang di Store Ikan Realtime</h2>
+    <input id="roomCodeInput" type="text" placeholder="Masukkan 4 Digit Kode Kamar" maxlength="4" class="w-full max-w-xs border-2 border-white/50 bg-white/10 text-white placeholder-white/50 p-4 rounded-xl mb-4 text-center text-xl font-bold outline-none focus:border-white">
+    <button onclick="joinOrCreateRoom()" class="w-full max-w-xs bg-white text-[#0056e0] py-4 rounded-xl font-bold mb-3 hover:bg-slate-100 transition">Mulai / Hubungkan</button>
+    <p class="text-sm opacity-70">Aplikasi ini akan tersambung ke database online secara realtime.</p>
+</div>
 
-        let db = null;
-        let isOnline = false;
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-database-compat.js"></script>
 
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            isOnline = true;
-        } catch (e) {
-            console.log("Firebase tidak terkonfigurasi. Menggunakan penyimpanan Lokal.");
-        }
+<script>
+// ==========================================
+// PENTING: KONFIGURASI FIREBASE ANDA
+// Ganti dengan kode config dari console Firebase
+// ==========================================
+const firebaseConfig = {
+  // === TEMPELKAN KODE FIREBASE ANDA DI SINI ===
+  //apiKey: "AIzaSy...",
+  //authDomain: "proyek-anda.firebaseapp.com",
+  //databaseURL: "https://proyek-anda-default-rtdb.firebaseio.com",
+  //projectId: "proyek-anda",
+  //storageBucket: "proyek-anda.appspot.com",
+  //messagingSenderId: "123...",
+  //appId: "1:123..."
+  // ============================================
+};
 
-        // Global State
-        window.stockData = JSON.parse(localStorage.getItem('stockData')) || [];
-        window.historyData = JSON.parse(localStorage.getItem('historyData')) || [];
-        window.currentImageBase64 = "";
+// Inisialisasi Firebase (jika config tersedia)
+let db;
+let currentRoom = null;
+let currentData = {};
 
-        // Synchronize Data
-        if (isOnline && db) {
-            onSnapshot(collection(db, "stockIkan"), (snapshot) => {
-                window.stockData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderAll();
-            });
-            onSnapshot(collection(db, "historyIkan"), (snapshot) => {
-                window.historyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderHistory();
-            });
-        }
+if (!firebaseConfig.apiKey) {
+    alert("Firebase belum dikonfigurasi. Aplikasi tidak akan realtime. Baca komentar di kode HTML.");
+} else {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+}
 
-        window.db = db;
-        window.isOnline = isOnline;
-    </script>
+// ------------------------------------------
+// Fungsi Manajemen Kamar (Online Connection)
+// ------------------------------------------
+function joinOrCreateRoom() {
+    let code = document.getElementById('roomCodeInput').value.trim();
+    if (code.length < 4) {
+        alert("Kode kamar harus 4 digit.");
+        return;
+    }
+    
+    currentRoom = code;
+    document.getElementById('roomCodeDisplay').innerText = code;
+    document.getElementById('loginModal').style.display = 'none';
+    
+    // Simpan ke localstorage agar tidak login terus
+    localStorage.setItem('fishStoreRoomCode', code);
+    
+    startRealtimeSync();
+}
 
-    <script>
-        function openModal() {
-            document.getElementById('entryModal').classList.remove('hidden');
-            document.getElementById('entryModal').classList.add('flex');
-        }
+// Periksa apakah user sudah login sebelumnya
+window.onload = function() {
+    const savedRoom = localStorage.getItem('fishStoreRoomCode');
+    if (savedRoom) {
+        document.getElementById('roomCodeInput').value = savedRoom;
+        joinOrCreateRoom();
+    }
+}
 
-        function closeModal() {
-            document.getElementById('entryModal').classList.add('hidden');
-            document.getElementById('entryModal').classList.remove('flex');
-            document.getElementById('entryForm').reset();
-            document.getElementById('imagePreviewContainer').classList.add('hidden');
-            window.currentImageBase64 = "";
-        }
+function logout() {
+    localStorage.removeItem('fishStoreRoomCode');
+    window.location.reload();
+}
 
-        function previewImage(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    window.currentImageBase64 = e.target.result;
-                    document.getElementById('imagePreview').src = e.target.result;
-                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
+function shareCode() {
+    if (currentRoom && navigator.share) {
+        navigator.share({
+            title: 'Store Ikan - Hubungkan Stok',
+            text: `Ayo terhubung dengan stok realtime. Gunakan kode kamar: ${currentRoom}`,
+            url: window.location.href,
+        }).catch(console.error);
+    } else {
+        alert(`Gunakan kode ${currentRoom} untuk terhubung.`);
+    }
+}
+
+// ------------------------------------------
+// Fungsi Sinkronisasi Realtime Firebase
+// ------------------------------------------
+function startRealtimeSync() {
+    if (!db || !currentRoom) return;
+
+    // Referensi ke data di database
+    const roomRef = db.ref('rooms/' + currentRoom);
+
+    // Langganan pembaruan (Event ini terpicu setiap ada perubahan data)
+    roomRef.on('value', (snapshot) => {
+        currentData = snapshot.val() || { stock: [], history: [] };
+        
+        // Pastikan stock dan history selalu ada (cegah error jika data null)
+        if (!currentData.stock) currentData.stock = [];
+        if (!currentData.history) currentData.history = [];
+
+        updateUI();
+    }, (error) => {
+        alert("Gagal terhubung ke database. Aturan Firebase salah?");
+        console.error(error);
+    });
+}
+
+function writeData(dataToUpdate) {
+    if (!db || !currentRoom) return;
+    db.ref('rooms/' + currentRoom).set(dataToUpdate);
+}
+
+// ------------------------------------------
+// Fungsi Update Tampilan (UI)
+// ------------------------------------------
+function updateUI() {
+    let totalInKg = 0;
+    let totalOutKg = 0;
+    let totalCutBox = 0;
+    let totalBoxCount = 0;
+
+    const tbody = document.getElementById('stockTableBody');
+    const oldRows = tbody.querySelectorAll('tr:not(#noDataPlaceholder)');
+    oldRows.forEach(row => row.remove());
+
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    let filteredCount = 0;
+
+    // Hitung ringkasan & bangun tabel
+    const stockData = Object.entries(currentData.stock);
+
+    if (stockData.length === 0) {
+        document.getElementById('noDataPlaceholder').style.display = 'table-row';
+    } else {
+        document.getElementById('noDataPlaceholder').style.display = 'none';
+
+        stockData.forEach(([id, item], index) => {
+            if (!item.boxNumber) return;
+
+            totalBoxCount++;
+            let itemInKg = parseFloat(item.weightIn || 0);
+            let itemOutKg = parseFloat(item.weightOut || 0);
+
+            totalInKg += itemInKg;
+            totalOutKg += itemOutKg;
+            if (item.isCut) totalCutBox++;
+
+            // Fitur Pencarian
+            if (item.boxNumber.toLowerCase().includes(searchInput)) {
+                filteredCount++;
+                let row = document.createElement('tr');
+                row.className = "border-b text-sm";
+                row.innerHTML = `
+                    <td class="py-3 font-medium text-slate-800">${item.boxNumber}</td>
+                    <td class="py-3"><i class="fas fa-image text-slate-300"></i></td>
+                    <td class="py-3 text-sm text-[#0056e0] font-bold">${itemInKg.toFixed(3)} Kg</td>
+                    <td class="py-3">${item.isCut ? '<i class="fas fa-check text-yellow-500"></i>' : ''}</td>
+                    <td class="py-3 text-sm text-red-600 font-bold">${itemOutKg.toFixed(3)} Kg</td>
+                    <td class="py-3">
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="performAction('${id}', 'cut')" class="text-yellow-600 bg-yellow-50 p-2 rounded-lg ${item.isCut ? 'opacity-30' : ''}" ${item.isCut ? 'disabled' : ''}><i class="fas fa-cut"></i></button>
+                            <button onclick="performAction('${id}', 'out')" class="text-red-600 bg-red-50 p-2 rounded-lg ${itemOutKg > 0 ? 'opacity-30' : ''}" ${itemOutKg > 0 ? 'disabled' : ''}><i class="fas fa-box-open"></i></button>
+                            <button onclick="performAction('${id}', 'delete')" class="text-slate-400 p-2 rounded-lg hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
             }
-        }
+        });
+    }
 
-        async function saveEntry(event) {
-            event.preventDefault();
-            const boxNum = document.getElementById('boxNum').value;
-            const inKg = parseFloat(document.getElementById('inKg').value) || 0;
-            const isCut = document.getElementById('isCut').value;
-            const outKg = parseFloat(document.getElementById('outKg').value) || 0;
-            const foto = window.currentImageBase64 || "https://via.placeholder.com/50?text=No+Foto";
+    // Update Statistik
+    document.getElementById('totalBox').innerText = totalBoxCount;
+    document.getElementById('totalIN').innerText = totalInKg.toFixed(3) + " Kg";
+    document.getElementById('totalCUT').innerText = totalCutBox + " Box";
+    document.getElementById('totalOUT').innerText = totalOutKg.toFixed(3) + " Kg";
+    document.getElementById('stokTersedia').innerText = (totalInKg - totalOutKg).toFixed(3) + " Kg";
+    document.getElementById('dataCount').innerText = `${filteredCount} Data`;
 
-            const newItem = {
-                boxNum: boxNum,
-                inKg: inKg,
-                isCut: isCut,
-                outKg: outKg,
-                foto: foto,
-                createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
+    // Update Histori
+    const historyList = document.getElementById('historyList');
+    if (currentData.history.length === 0) {
+        historyList.innerHTML = "Belum ada riwayat transaksi.";
+    } else {
+        historyList.innerHTML = '';
+        currentData.history.slice(-20).reverse().forEach(log => {
+            let logItem = document.createElement('div');
+            logItem.className = "text-xs p-2 bg-slate-50 rounded flex justify-between";
+            logItem.innerHTML = `<span>${log.desc}</span><span class="text-slate-400">${log.time}</span>`;
+            historyList.appendChild(logItem);
+        });
+    }
+}
 
-            const historyLog = {
-                text: `Menambahkan Box #${boxNum} (IN: ${inKg.toFixed(3)} Kg)`,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
+// ------------------------------------------
+// Fungsi Aksi Transaksi
+// ------------------------------------------
+function addEntryBox() {
+    let boxNum = document.getElementById('newBoxNumber').value.trim();
+    let weightIn = parseFloat(document.getElementById('newWeightIn').value);
 
-            if (window.isOnline && window.db) {
-                const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-                await addDoc(collection(window.db, "stockIkan"), newItem);
-                await addDoc(collection(window.db, "historyIkan"), historyLog);
+    if (!boxNum || isNaN(weightIn) || weightIn <= 0) {
+        alert("Isi Box Number dan Berat dengan benar.");
+        return;
+    }
+
+    // Gunakan Firebase push untuk ID unik
+    const newStockRef = db.ref('rooms/' + currentRoom + '/stock').push();
+    newStockRef.set({
+        boxNumber: boxNum,
+        weightIn: weightIn,
+        isCut: false,
+        weightOut: 0,
+        addedAt: new Date().toISOString()
+    });
+
+    addLog(`Tambah Box ${boxNum} (+${weightIn} Kg)`);
+    closeModal('addModal');
+    // Reset form
+    document.getElementById('newBoxNumber').value = '';
+    document.getElementById('newWeightIn').value = '';
+}
+
+function performAction(id, type) {
+    if (!currentData.stock[id]) return;
+    const item = currentData.stock[id];
+    let updateData = {};
+    let logDesc = '';
+
+    switch(type) {
+        case 'cut':
+            updateData.isCut = true;
+            logDesc = `CUT Box ${item.boxNumber}`;
+            break;
+        case 'out':
+            // Sederhananya, berat keluar = berat masuk
+            updateData.weightOut = item.weightIn;
+            logDesc = `OUT Box ${item.boxNumber} (-${item.weightIn} Kg)`;
+            break;
+        case 'delete':
+            if(confirm(`Hapus data Box ${item.boxNumber}?`)) {
+                db.ref(`rooms/${currentRoom}/stock/${id}`).remove();
+                addLog(`Hapus Box ${item.boxNumber}`);
+                return; // Berhenti karena data sudah dihapus
             } else {
-                window.stockData.push(newItem);
-                window.historyData.unshift(historyLog);
-                localStorage.setItem('stockData', JSON.stringify(window.stockData));
-                localStorage.setItem('historyData', JSON.stringify(window.historyData));
-                renderAll();
+                return; // User batal
             }
+    }
 
-            closeModal();
-        }
+    if (Object.keys(updateData).length > 0) {
+        db.ref(`rooms/${currentRoom}/stock/${id}`).update(updateData);
+        addLog(logDesc);
+    }
+}
 
-        async function deleteItem(index, id) {
-            if (confirm("Hapus data stok ini?")) {
-                if (window.isOnline && window.db && id) {
-                    const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-                    await deleteDoc(doc(window.db, "stockIkan", id));
-                } else {
-                    window.stockData.splice(index, 1);
-                    localStorage.setItem('stockData', JSON.stringify(window.stockData));
-                    renderAll();
-                }
-            }
-        }
+function addLog(desc) {
+    // Sederhananya, tambahkan histori sebagai node baru
+    db.ref('rooms/' + currentRoom + '/history').push({
+        desc: desc,
+        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    });
+}
 
-        async function clearHistory() {
-            if (confirm("Hapus semua histori transaksi?")) {
-                if (window.isOnline && window.db) {
-                    const { collection, getDocs, deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-                    const snapshot = await getDocs(collection(window.db, "historyIkan"));
-                    snapshot.docs.forEach(async (d) => {
-                        await deleteDoc(doc(window.db, "historyIkan", d.id));
-                    });
-                }
-                window.historyData = [];
-                localStorage.setItem('historyData', JSON.stringify([]));
-                renderHistory();
-            }
-        }
+function clearHistory() {
+    if(confirm("Hapus semua histori transaksi?")) {
+        db.ref('rooms/' + currentRoom + '/history').remove();
+    }
+}
 
-        function renderAll() {
-            renderTable();
-            renderStats();
-            renderHistory();
-        }
+// Fitur Pencarian Realtime
+document.getElementById('searchInput').addEventListener('input', updateUI);
 
-        function renderStats() {
-            const totalBox = window.stockData.length;
-            const totalIn = window.stockData.reduce((acc, curr) => acc + parseFloat(curr.inKg || 0), 0);
-            const totalCutCount = window.stockData.filter(item => item.isCut === "Ya").length;
-            const totalOut = window.stockData.reduce((acc, curr) => acc + parseFloat(curr.outKg || 0), 0);
-            const stokTersedia = totalIn - totalOut;
+// ------------------------------------------
+// Fungsi Modal
+// ------------------------------------------
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'flex';
+}
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+</script>
 
-            document.getElementById('statTotalBox').innerText = totalBox;
-            document.getElementById('statTotalIn').innerText = `${totalIn.toFixed(3)} Kg`;
-            document.getElementById('statTotalCut').innerText = `${totalCutCount} Box`;
-            document.getElementById('statTotalOut').innerText = `${totalOut.toFixed(3)} Kg`;
-            document.getElementById('statStokTersedia').innerText = `${stokTersedia.toFixed(3)} Kg`;
-            document.getElementById('dataCount').innerText = `${totalBox} Data`;
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('stockTableBody');
-            const searchVal = document.getElementById('searchInput').value.toLowerCase();
-            tbody.innerHTML = '';
-
-            const filteredData = window.stockData.filter(item => item.boxNum.toLowerCase().includes(searchVal));
-
-            if (filteredData.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center py-6 text-gray-400">Belum ada data barang.</td>
-                    </tr>`;
-                return;
-            }
-
-            filteredData.forEach((item, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-gray-50";
-                tr.innerHTML = `
-                    <td class="p-2 font-medium text-gray-700">${item.boxNum}</td>
-                    <td class="p-2">
-                        <img src="${item.foto}" class="w-9 h-9 object-cover rounded-lg border">
-                    </td>
-                    <td class="p-2 font-semibold text-blue-600">${parseFloat(item.inKg).toFixed(3)}</td>
-                    <td class="p-2">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.isCut === 'Ya' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}">
-                            ${item.isCut}
-                        </span>
-                    </td>
-                    <td class="p-2 font-semibold text-red-500">${parseFloat(item.outKg).toFixed(3)}</td>
-                    <td class="p-2 text-center">
-                        <button onclick="deleteItem(${index}, '${item.id || ''}')" class="text-red-500 hover:text-red-700">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function renderHistory() {
-            const historyContainer = document.getElementById('historyList');
-            historyContainer.innerHTML = '';
-
-            if (window.historyData.length === 0) {
-                historyContainer.innerHTML = `<p class="text-center text-gray-400 py-2">Belum ada riwayat transaksi.</p>`;
-                return;
-            }
-
-            window.historyData.forEach(item => {
-                const div = document.createElement('div');
-                div.className = "flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100";
-                div.innerHTML = `
-                    <span class="text-gray-700 font-medium">${item.text}</span>
-                    <span class="text-[10px] text-gray-400 font-sans">${item.time}</span>
-                `;
-                historyContainer.appendChild(div);
-            });
-        }
-
-        function bagikanKode() {
-            navigator.clipboard.writeText("KODE-TERHUBUNG-2");
-            alert("Kode toko berhasil disalin! Bagikan ke HP lain untuk terhubung.");
-        }
-
-        function resetData() {
-            if (confirm("Apakah Anda yakin ingin keluar dan membersihkan sesi?")) {
-                alert("Anda berhasil keluar.");
-            }
-        }
-
-        // Render awal jika tidak menggunakan mode online Firebase
-        renderAll();
-    </script>
 </body>
-</html>
+    </html>
