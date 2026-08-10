@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STORE IKAN - Stok Realtime</title>
-    <!-- Tailwind CSS CDN untuk desain cepat -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome untuk ikon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -48,9 +48,9 @@
                 <span>Kode Terhubung:</span>
                 <span id="roomCodeDisplay" class="bg-blue-100 text-[#0056e0] font-bold px-2 py-0.5 rounded-full text-xs">?</span>
             </div>
-            <div class="flex items-center gap-1.5 text-xs text-green-600 font-medium">
+            <div id="statusBadge" class="flex items-center gap-1.5 text-xs text-green-600 font-medium">
                 <div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-                Online Realtime
+                Siap Digunakan
             </div>
         </div>
 
@@ -114,7 +114,6 @@
                         </tr>
                     </thead>
                     <tbody id="stockTableBody">
-                        <!-- Data akan diisi oleh JavaScript -->
                         <tr id="noDataPlaceholder">
                             <td colspan="6" class="py-12 text-slate-400 italic">Belum ada data barang.</td>
                         </tr>
@@ -142,9 +141,7 @@
     </div>
 </div>
 
-<!-- ============================ -->
 <!-- MODAL: Tambah Entry Box -->
-<!-- ============================ -->
 <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden items-center justify-center p-4">
     <div class="bg-white p-6 rounded-2xl w-full max-w-sm">
         <h3 class="text-lg font-bold mb-4">Entry Box Baru</h3>
@@ -157,17 +154,14 @@
     </div>
 </div>
 
-<!-- ============================ -->
 <!-- MODAL: Login/Create Room -->
-<!-- ============================ -->
 <div id="loginModal" class="fixed inset-0 bg-[#0056e0] text-white z-[200] flex flex-col items-center justify-center p-8 text-center">
     <div class="bg-white p-1.5 rounded-full text-[#0056e0] text-5xl w-24 h-24 flex items-center justify-center mb-6">
         <i class="fas fa-fish"></i>
     </div>
-    <h2 class="text-2xl font-bold mb-6">Selamat Datang di Store Ikan Realtime</h2>
-    <input id="roomCodeInput" type="text" placeholder="Masukkan 4 Digit Kode Kamar" maxlength="4" class="w-full max-w-xs border-2 border-white/50 bg-white/10 text-white placeholder-white/50 p-4 rounded-xl mb-4 text-center text-xl font-bold outline-none focus:border-white">
-    <button onclick="joinOrCreateRoom()" class="w-full max-w-xs bg-white text-[#0056e0] py-4 rounded-xl font-bold mb-3 hover:bg-slate-100 transition">Mulai / Hubungkan</button>
-    <p class="text-sm opacity-70">Aplikasi ini akan tersambung ke database online secara realtime.</p>
+    <h2 class="text-2xl font-bold mb-6">Selamat Datang di Store Ikan</h2>
+    <input id="roomCodeInput" type="text" placeholder="Masukkan Kode Kamar/Toko" maxlength="10" class="w-full max-w-xs border-2 border-white/50 bg-white/10 text-white placeholder-white/50 p-4 rounded-xl mb-4 text-center text-xl font-bold outline-none focus:border-white">
+    <button onclick="joinOrCreateRoom()" class="w-full max-w-xs bg-white text-[#0056e0] py-4 rounded-xl font-bold mb-3 hover:bg-slate-100 transition">Mulai / Masuk</button>
 </div>
 
 <!-- Firebase SDK -->
@@ -175,41 +169,33 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-database-compat.js"></script>
 
 <script>
-// ==========================================
-// PENTING: KONFIGURASI FIREBASE ANDA
-// Ganti dengan kode config dari console Firebase
-// ==========================================
+// OPTIONAL: Isi ini jika nanti ingin menghubungkan antar HP secara online via Firebase
 const firebaseConfig = {
-  // === TEMPELKAN KODE FIREBASE ANDA DI SINI ===
-  //apiKey: "AIzaSy...",
-  //authDomain: "proyek-anda.firebaseapp.com",
-  //databaseURL: "https://proyek-anda-default-rtdb.firebaseio.com",
-  //projectId: "proyek-anda",
-  //storageBucket: "proyek-anda.appspot.com",
-  //messagingSenderId: "123...",
-  //appId: "1:123..."
-  // ============================================
+    // apiKey: "...",
+    // authDomain: "...",
+    // databaseURL: "...",
+    // projectId: "...",
+    // storageBucket: "...",
+    // messagingSenderId: "...",
+    // appId: "..."
 };
 
-// Inisialisasi Firebase (jika config tersedia)
-let db;
+let db = null;
 let currentRoom = null;
-let currentData = {};
+let currentData = { stock: {}, history: [] };
+let isOnlineMode = false;
 
-if (!firebaseConfig.apiKey) {
-    alert("Firebase belum dikonfigurasi. Aplikasi tidak akan realtime. Baca komentar di kode HTML.");
-} else {
+// Cek apakah Firebase sudah dikonfigurasi
+if (typeof firebase !== "undefined" && firebaseConfig.apiKey) {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
+    isOnlineMode = true;
 }
 
-// ------------------------------------------
-// Fungsi Manajemen Kamar (Online Connection)
-// ------------------------------------------
 function joinOrCreateRoom() {
     let code = document.getElementById('roomCodeInput').value.trim();
-    if (code.length < 4) {
-        alert("Kode kamar harus 4 digit.");
+    if (!code) {
+        alert("Masukkan kode kamar/toko terlebih dahulu.");
         return;
     }
     
@@ -217,13 +203,15 @@ function joinOrCreateRoom() {
     document.getElementById('roomCodeDisplay').innerText = code;
     document.getElementById('loginModal').style.display = 'none';
     
-    // Simpan ke localstorage agar tidak login terus
     localStorage.setItem('fishStoreRoomCode', code);
-    
-    startRealtimeSync();
+
+    if (isOnlineMode) {
+        startRealtimeSync();
+    } else {
+        loadLocalData();
+    }
 }
 
-// Periksa apakah user sudah login sebelumnya
 window.onload = function() {
     const savedRoom = localStorage.getItem('fishStoreRoomCode');
     if (savedRoom) {
@@ -241,7 +229,7 @@ function shareCode() {
     if (currentRoom && navigator.share) {
         navigator.share({
             title: 'Store Ikan - Hubungkan Stok',
-            text: `Ayo terhubung dengan stok realtime. Gunakan kode kamar: ${currentRoom}`,
+            text: `Gunakan kode toko: ${currentRoom}`,
             url: window.location.href,
         }).catch(console.error);
     } else {
@@ -250,36 +238,43 @@ function shareCode() {
 }
 
 // ------------------------------------------
-// Fungsi Sinkronisasi Realtime Firebase
+// PENGELOLAAN DATA (HYBRID: OFFLINE / ONLINE)
 // ------------------------------------------
+function saveData() {
+    if (isOnlineMode && db && currentRoom) {
+        db.ref('rooms/' + currentRoom).set(currentData);
+    } else {
+        localStorage.setItem('fishStoreData_' + currentRoom, JSON.stringify(currentData));
+        updateUI();
+    }
+}
+
+function loadLocalData() {
+    const local = localStorage.getItem('fishStoreData_' + currentRoom);
+    if (local) {
+        currentData = JSON.parse(local);
+        if (!currentData.stock) currentData.stock = {};
+        if (!currentData.history) currentData.history = [];
+    } else {
+        currentData = { stock: {}, history: [] };
+    }
+    updateUI();
+}
+
 function startRealtimeSync() {
     if (!db || !currentRoom) return;
-
-    // Referensi ke data di database
     const roomRef = db.ref('rooms/' + currentRoom);
-
-    // Langganan pembaruan (Event ini terpicu setiap ada perubahan data)
     roomRef.on('value', (snapshot) => {
-        currentData = snapshot.val() || { stock: [], history: [] };
-        
-        // Pastikan stock dan history selalu ada (cegah error jika data null)
-        if (!currentData.stock) currentData.stock = [];
+        const val = snapshot.val();
+        currentData = val || { stock: {}, history: [] };
+        if (!currentData.stock) currentData.stock = {};
         if (!currentData.history) currentData.history = [];
-
         updateUI();
-    }, (error) => {
-        alert("Gagal terhubung ke database. Aturan Firebase salah?");
-        console.error(error);
     });
 }
 
-function writeData(dataToUpdate) {
-    if (!db || !currentRoom) return;
-    db.ref('rooms/' + currentRoom).set(dataToUpdate);
-}
-
 // ------------------------------------------
-// Fungsi Update Tampilan (UI)
+// UPDATE TAMPILAN
 // ------------------------------------------
 function updateUI() {
     let totalInKg = 0;
@@ -294,16 +289,15 @@ function updateUI() {
     const searchInput = document.getElementById('searchInput').value.toLowerCase();
     let filteredCount = 0;
 
-    // Hitung ringkasan & bangun tabel
-    const stockData = Object.entries(currentData.stock);
+    const stockEntries = Object.entries(currentData.stock || {});
 
-    if (stockData.length === 0) {
+    if (stockEntries.length === 0) {
         document.getElementById('noDataPlaceholder').style.display = 'table-row';
     } else {
         document.getElementById('noDataPlaceholder').style.display = 'none';
 
-        stockData.forEach(([id, item], index) => {
-            if (!item.boxNumber) return;
+        stockEntries.forEach(([id, item]) => {
+            if (!item || !item.boxNumber) return;
 
             totalBoxCount++;
             let itemInKg = parseFloat(item.weightIn || 0);
@@ -313,7 +307,6 @@ function updateUI() {
             totalOutKg += itemOutKg;
             if (item.isCut) totalCutBox++;
 
-            // Fitur Pencarian
             if (item.boxNumber.toLowerCase().includes(searchInput)) {
                 filteredCount++;
                 let row = document.createElement('tr');
@@ -322,7 +315,7 @@ function updateUI() {
                     <td class="py-3 font-medium text-slate-800">${item.boxNumber}</td>
                     <td class="py-3"><i class="fas fa-image text-slate-300"></i></td>
                     <td class="py-3 text-sm text-[#0056e0] font-bold">${itemInKg.toFixed(3)} Kg</td>
-                    <td class="py-3">${item.isCut ? '<i class="fas fa-check text-yellow-500"></i>' : ''}</td>
+                    <td class="py-3">${item.isCut ? '<i class="fas fa-check text-yellow-500 font-bold"></i>' : ''}</td>
                     <td class="py-3 text-sm text-red-600 font-bold">${itemOutKg.toFixed(3)} Kg</td>
                     <td class="py-3">
                         <div class="flex gap-1 justify-center">
@@ -337,7 +330,6 @@ function updateUI() {
         });
     }
 
-    // Update Statistik
     document.getElementById('totalBox').innerText = totalBoxCount;
     document.getElementById('totalIN').innerText = totalInKg.toFixed(3) + " Kg";
     document.getElementById('totalCUT').innerText = totalCutBox + " Box";
@@ -345,9 +337,8 @@ function updateUI() {
     document.getElementById('stokTersedia').innerText = (totalInKg - totalOutKg).toFixed(3) + " Kg";
     document.getElementById('dataCount').innerText = `${filteredCount} Data`;
 
-    // Update Histori
     const historyList = document.getElementById('historyList');
-    if (currentData.history.length === 0) {
+    if (!currentData.history || currentData.history.length === 0) {
         historyList.innerHTML = "Belum ada riwayat transaksi.";
     } else {
         historyList.innerHTML = '';
@@ -361,30 +352,33 @@ function updateUI() {
 }
 
 // ------------------------------------------
-// Fungsi Aksi Transaksi
+// AKSI FORM & TRANSAKSI
 // ------------------------------------------
 function addEntryBox() {
     let boxNum = document.getElementById('newBoxNumber').value.trim();
     let weightIn = parseFloat(document.getElementById('newWeightIn').value);
 
     if (!boxNum || isNaN(weightIn) || weightIn <= 0) {
-        alert("Isi Box Number dan Berat dengan benar.");
+        alert("Isi Nomor Box dan Berat Masuk dengan benar.");
         return;
     }
 
-    // Gunakan Firebase push untuk ID unik
-    const newStockRef = db.ref('rooms/' + currentRoom + '/stock').push();
-    newStockRef.set({
+    if (!currentData.stock) currentData.stock = {};
+    if (!currentData.history) currentData.history = [];
+
+    let id = 'box_' + Date.now();
+    currentData.stock[id] = {
         boxNumber: boxNum,
         weightIn: weightIn,
         isCut: false,
         weightOut: 0,
         addedAt: new Date().toISOString()
-    });
+    };
 
     addLog(`Tambah Box ${boxNum} (+${weightIn} Kg)`);
+    saveData();
+
     closeModal('addModal');
-    // Reset form
     document.getElementById('newBoxNumber').value = '';
     document.getElementById('newWeightIn').value = '';
 }
@@ -392,55 +386,42 @@ function addEntryBox() {
 function performAction(id, type) {
     if (!currentData.stock[id]) return;
     const item = currentData.stock[id];
-    let updateData = {};
-    let logDesc = '';
 
-    switch(type) {
-        case 'cut':
-            updateData.isCut = true;
-            logDesc = `CUT Box ${item.boxNumber}`;
-            break;
-        case 'out':
-            // Sederhananya, berat keluar = berat masuk
-            updateData.weightOut = item.weightIn;
-            logDesc = `OUT Box ${item.boxNumber} (-${item.weightIn} Kg)`;
-            break;
-        case 'delete':
-            if(confirm(`Hapus data Box ${item.boxNumber}?`)) {
-                db.ref(`rooms/${currentRoom}/stock/${id}`).remove();
-                addLog(`Hapus Box ${item.boxNumber}`);
-                return; // Berhenti karena data sudah dihapus
-            } else {
-                return; // User batal
-            }
+    if (type === 'cut') {
+        item.isCut = true;
+        addLog(`CUT Box ${item.boxNumber}`);
+    } else if (type === 'out') {
+        item.weightOut = item.weightIn;
+        addLog(`OUT Box ${item.boxNumber} (-${item.weightIn} Kg)`);
+    } else if (type === 'delete') {
+        if (confirm(`Hapus data Box ${item.boxNumber}?`)) {
+            addLog(`Hapus Box ${item.boxNumber}`);
+            delete currentData.stock[id];
+        } else {
+            return;
+        }
     }
 
-    if (Object.keys(updateData).length > 0) {
-        db.ref(`rooms/${currentRoom}/stock/${id}`).update(updateData);
-        addLog(logDesc);
-    }
+    saveData();
 }
 
 function addLog(desc) {
-    // Sederhananya, tambahkan histori sebagai node baru
-    db.ref('rooms/' + currentRoom + '/history').push({
+    if (!currentData.history) currentData.history = [];
+    currentData.history.push({
         desc: desc,
         time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
     });
 }
 
 function clearHistory() {
-    if(confirm("Hapus semua histori transaksi?")) {
-        db.ref('rooms/' + currentRoom + '/history').remove();
+    if (confirm("Hapus semua histori transaksi?")) {
+        currentData.history = [];
+        saveData();
     }
 }
 
-// Fitur Pencarian Realtime
 document.getElementById('searchInput').addEventListener('input', updateUI);
 
-// ------------------------------------------
-// Fungsi Modal
-// ------------------------------------------
 function openModal(modalId) {
     document.getElementById(modalId).style.display = 'flex';
 }
@@ -450,4 +431,4 @@ function closeModal(modalId) {
 </script>
 
 </body>
-</html>
+    </html>
