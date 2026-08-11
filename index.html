@@ -259,7 +259,7 @@ try{
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-2xl sm:text-3xl w-8 text-center":"red text-2xl sm:text-3xl w-8 text-center"}
-function roomPath(){return "rooms/"+currentRoom}
+function roomPath(){return "rooms/"+encodeURIComponent(currentRoom).replace(/\./g, '%2E')}
 function showLoginError(m){$("loginError").textContent=m;$("loginError").classList.remove("hidden")}
 
 function requestNotifPermission(){
@@ -292,8 +292,9 @@ function sendNotification(title, body){
 
 function joinRoom(){
     const inputEl = $("loginRoomCode");
-    const code = inputEl ? inputEl.value.trim().toUpperCase() : "";
-    if(!code) return showLoginError("Masukkan kode toko terlebih dahulu.");
+    let code = inputEl ? inputEl.value.trim().toUpperCase() : "";
+    code = code.replace(/[.#$\[\]\/]/g, "");
+    if(!code) return showLoginError("Masukkan kode toko yang valid (huruf & angka).");
     if(!db) return showLoginError("Firebase gagal dimuat. Periksa koneksi internet.");
     
     currentRoom = code;
@@ -305,8 +306,9 @@ function joinRoom(){
 }
 
 function saveRoomCode(){
-    const c=$("roomCodeInput2").value.trim().toUpperCase();
-    if(!c)return alert("Kode toko tidak boleh kosong.");
+    let c=$("roomCodeInput2").value.trim().toUpperCase();
+    c = c.replace(/[.#$\[\]\/]/g, "");
+    if(!c)return alert("Kode toko tidak boleh kosong atau mengandung karakter khusus.");
     currentRoom=c;
     localStorage.setItem("fishStoreRoomCode",c);
     $("loginRoomCode").value=c;
@@ -333,14 +335,14 @@ function subscribe(){
         
         currentData = newData;
         isInitialLoad = false;
-        $("loginModal").style.display="none";
+        closeModal("loginModal");
         refreshUI();
         setStatus("Realtime",true);
     },e=>{
         console.error(e);
         setStatus("Database Error",false);
         showLoginError("Database: "+(e.code||e.message));
-        $("loginModal").style.display="flex";
+        openModal("loginModal");
     });
 }
 
@@ -366,7 +368,4 @@ function compressImage(u,cb){
     const i=new Image();
     i.onload=()=>{
         const m=900,s=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement("canvas");
-        c.width=Math.max(1,i.width*s);
-        c.height=Math.max(1,i.height*s);
-        c.getContext("2d").drawImage(i,0,0,c.width,c.height);
-        cb(c.toDataURL("image/jpe
+        c.width=Math.max(1,i.width*
