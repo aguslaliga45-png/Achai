@@ -373,4 +373,353 @@ function subscribe(){
 
         currentData = newData;
         refreshUI();
-        setStatus("Realtime
+        setStatus("Realtime", true);
+    }, e => {
+        setStatus("Offline/Gagal", false);
+    });
+}
+
+function saveData(){
+    if(!db || !currentRoom) return alert("Belum terhubung ke kode toko.");
+    pendingLocalWriteSignature = dataSignature(currentData);
+    db.ref(roomPath()).set(currentData).catch(e => {
+        pendingLocalWriteSignature = null;
+        setStatus("Gagal menyimpan", false);
+    });
+}
+
+function makeLog(desc, type, box, qty, isCutStatus=""){
+    if(!currentData.history) currentData.history = [];
+    currentData.history.push({
+        id: "hist_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
+        desc, 
+        type, 
+        boxNumber: box, 
+        quantity: Number(qty)||0, 
+        isCutStatus, 
+        timestamp: new Date().toISOString(), 
+        deviceId
+    });
+    if(currentData.history.length > 1000) currentData.history = currentData.history.slice(-1000);
+}
+
+function formatDateTime(x){
+    const d = new Date(x);
+    return isNaN(d) ? "-" : d.toLocaleString("id-ID",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+
+function compressImage(u,cb){
+    const i = new Image();
+    i.onload = () => {
+        const m = 800, s = Math.min(1, m/Math.max(i.width,i.height)), c = document.createElement("canvas");
+        c.width = Math.max(1, i.width*s);
+        c.height = Math.max(1, i.height*s);
+        c.getContext("2d").drawImage(i,0,0,c.width,c.height);
+        cb(c.toDataURL("image/jpeg", .75));
+    };
+    i.onerror = () => cb(u);
+    i.src = u;
+}
+
+// Fungsi Panggil Kamera Bawaan HP
+function triggerCameraInput(targetId){
+    photoTarget = targetId;
+    $("nativeCameraInput").click();
+}
+
+// Fungsi Panggil Galeri File HP
+function triggerGalleryInput(targetId){
+    photoTarget = targetId;
+    $("nativeGalleryInput").click();
+}
+
+function handleImageFile(file){
+    if(!file) return;
+    const r = new FileReader();
+    r.onload = v => {
+        compressImage(v.target.result, p => {
+            if(photoTarget){
+                const x = currentData.stock?.[photoTarget];
+                if(x){
+                    x.image = p;
+                    makeLog("Update foto " + x.boxNumber, "FOTO", x.boxNumber, 0, x.isCut ? "Sudah Cut" : "Belum Cut");
+                    saveData();
+                }
+                photoTarget = null;
+            } else {
+                currentBase64Image = p;
+                $("photoPreview").src = p;
+                $("photoPreview").classList.remove("hidden");
+                $("photoStatusText").textContent = "Foto berhasil dimuat";
+            }
+        });
+    };
+    r.readAsDataURL(file);
+}
+
+$("nativeCameraInput").addEventListener("change", e => {
+    handleImageFile(e.target.files?.[0]);
+    e.target.value = "";
+});
+
+$("nativeGalleryInput").addEventListener("change", e => {
+    handleImageFile(e.target.files?.[0]);
+    e.target.value = "";
+});
+
+function addEntryBox(){
+    const b = $("newBoxNumber").value.trim().toUpperCase(), qty = parseFloat($("newWeightIn").value);
+    if(!currentRoom) return alert("Masuk ke kode toko terlebih dahulu.");
+    if(!b || !Number.isFinite(qty) || qty <= 0) return alert("Isi Nama Box dan Berat Masuk (Kg) dengan benar.");
+    
+    const id = "box_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
+    const finish = p => {
+        if(!currentData.stock) currentData.stock = {};
+        currentData.stock[id] = { boxNumber:b, weightIn:qty, weightOut:0, isCut:false, image:p||"", addedAt:new Date().toISOString() };
+        makeLog("Tambah stok " + b, "MASUK", b, qty, "Belum Cut");
+        saveData();
+        resetAdd();
+        closeModal("addModal");
+    };
+    currentBase64Image ? compressImage(currentBase64Image, finish) : finish("");
+}
+
+function resetAdd(){
+    $("newBoxNumber").value = "";
+    $("newWeightIn").value = "";
+    $("nativeCameraInput").value = "";
+    $("nativeGalleryInput").value = "";
+    $("photoPreview").classList.add("hidden");
+    $("photoPreview").src = "";
+    $("photoStatusText").textContent = "Belum ada foto dipilih";
+    currentBase64Image = "";
+}
+
+function toggleCut(id){
+    const x = currentData.stock?.[id];
+    if(!x) return;
+    x.isCut = !x.isCut;
+    const statusStr = x.isCut ? "Sudah Cut" : "Belum Cut";
+    makeLog("Ubah status cut " + x.boxNumber, "CUT", x.boxNumber, x.weightIn, statusStr);
+    saveData();
+}
+
+function toggleOut(id){
+    const x = currentData.stock?.[id];
+    if(!x) return;
+    activeOutBoxId = id;
+    const currentOut = Number(x.weightOut) || 0;
+    const inKg = Number(x.weightIn) || 0;
+    const maxSisa = Math.max(0, inKg - currentOut);
+    
+    $("outModalTitle").textContent = "KONTROL OUT - Box: " + x.boxNumber;
+    $("outModalInput").value = maxSisa > 0 ? maxSisa : 0;
+    openModal("outModal");
+    setTimeout(() => { $("outModalInput").focus(); $("outModalInput").select(); }, 100);
+}
+
+function submitOutModal(){
+    const id = activeOutBoxId;
+    const x = currentData.stock?.[id];
+    if(!x) return closeModal("outModal");
+    
+    let val = parseFloat($("outModalInput").value);
+    if(isNaN(val)) return alert("Masukkan angka yang valid!");
+    
+    const currentOut = Number(x.weightOut) || 0;
+    const inKg = Number(x.weightIn) || 0;
+    
+    let newOut;
+    if(val >= 0 && currentOut === 0) {
+        newOut = val;
+    } else if(val >= 0 && currentOut > 0) {
+        newOut = currentOut + val;
+    } else {
+        newOut = Math.max(0, currentOut + val);
+    }
+    
+    if(newOut > inKg) {
+        alert("Total berat keluar tidak boleh melebihi berat masuk (" + inKg + " Kg)!");
+        return;
+    }
+    
+    let diff = newOut - currentOut;
+    x.weightOut = newOut;
+    
+    if(diff !== 0) {
+        const logType = diff > 0 ? "OUT" : "KOREKSI OUT";
+        makeLog(logType + " " + x.boxNumber, logType, x.boxNumber, Math.abs(diff), x.isCut ? "Sudah Cut" : "Belum Cut");
+    }
+    closeModal("outModal");
+    saveData();
+}
+
+function deleteEntry(id){
+    const x = currentData.stock?.[id];
+    if(!x || !confirm("Hapus data " + x.boxNumber + "?")) return;
+    makeLog("Hapus " + x.boxNumber, "HAPUS", x.boxNumber, x.weightIn, x.isCut ? "Sudah Cut" : "Belum Cut");
+    delete currentData.stock[id];
+    saveData();
+}
+
+function refreshUI(){
+    let totalInSum = 0, totalOutSum = 0, totalCutNotOutSum = 0, totalCutOutSum = 0, count = 0;
+    let totalBoxCutCount = 0;
+    let totalBoxOutCount = 0;
+    
+    const list = $("stockList"), q = $("searchInput").value.trim().toLowerCase();
+    list.innerHTML = "";
+    
+    Object.entries(currentData.stock||{}).forEach(([id,x]) => {
+        if(!x || !x.boxNumber) return;
+        count++;
+        const inKg = parseFloat(x.weightIn) || 0;
+        const outKg = parseFloat(x.weightOut) || 0;
+        const stokKg = Math.max(0, inKg - outKg);
+
+        totalInSum += inKg;
+        totalOutSum += outKg;
+
+        if (x.isCut) {
+            totalCutOutSum += stokKg;
+            totalBoxCutCount++;
+        } else {
+            totalCutNotOutSum += stokKg;
+        }
+
+        if (stokKg === 0 && inKg > 0) {
+            totalBoxOutCount++;
+        }
+
+        if(q && !x.boxNumber.toLowerCase().includes(q)) return;
+
+        const d = document.createElement("div");
+        d.className = "glass rounded-xl p-2 flex items-center gap-2.5";
+        const p = x.image ? `<img src="${x.image}" onclick="showImage('${encodeURIComponent(x.image)}')" class="fish-photo rounded cursor-pointer">` : `<div class="fish-photo rounded bg-[#07121d] flex items-center justify-center text-slate-600 text-lg"><i class="fas fa-image"></i></div>`;
+        
+        const cutBtnClass = x.isCut ? "bg-[#064e3b] border-[#059669] text-green-300" : "bg-slate-800 border-slate-700 text-slate-400";
+        const cutText = x.isCut ? "SUDAH CUT" : "BELUM CUT";
+
+        const isAlreadyOut = outKg > 0;
+        const outBtnClass = isAlreadyOut 
+            ? "bg-[#7f1d1d] border-[#dc2626] text-red-400 font-bold" 
+            : "bg-slate-800 border-slate-700 text-slate-400";
+
+        d.innerHTML = `
+            <div class="shrink-0">${p}</div>
+            <div class="flex-1 min-w-0">
+                <div class="text-xs font-bold text-white uppercase">${esc(x.boxNumber)}</div>
+                <div class="flex gap-1 mt-1.5 flex-wrap">
+                    <span class="bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9px] blue">Masuk: ${inKg} Kg</span>
+                    <span class="bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9px] red">Keluar: ${outKg} Kg</span>
+                </div>
+            </div>
+            <div class="flex flex-col gap-1">
+                <button onclick="toggleCut('${id}')" class="${cutBtnClass} border rounded px-2 py-1 text-[10px] font-bold">${cutText}</button>
+                <button onclick="toggleOut('${id}')" class="${outBtnClass} border rounded px-2.5 py-1 text-[10px] font-bold" title="Tekan untuk tambah out / koreksi">OUT</button>
+            </div>
+            <div class="flex flex-col gap-1">
+                <button onclick="triggerCameraInput('${id}')" class="btn text-xs px-2 py-1.5 rounded text-slate-300" title="Ambil Kamera"><i class="fas fa-camera"></i></button>
+                <button onclick="deleteEntry('${id}')" class="btn text-xs px-2 py-1.5 rounded text-red-400"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        list.appendChild(d);
+    });
+
+    $("emptyStock").classList.toggle("hidden", count !== 0);
+    $("totalBox").textContent = count;
+    $("stokKg").textContent = Math.max(0, totalInSum - totalOutSum).toFixed(1);
+    $("totalCutNotOut").textContent = totalCutNotOutSum.toFixed(1);
+    $("totalCutOut").textContent = totalCutOutSum.toFixed(1);
+    
+    $("totalBoxCut").textContent = totalBoxCutCount + " Box";
+    $("totalBoxOut").textContent = totalBoxOutCount + " Box";
+
+    renderHistory();
+}
+
+function renderHistory(){
+    const list = $("historyList"), f = $("historyDate").value;
+    list.innerHTML = "";
+    const historyArr = Array.isArray(currentData.history) ? currentData.history : [];
+    const filtered = historyArr.filter(x => !f || String(x.timestamp).slice(0,10) === f).slice().reverse();
+    $("emptyHistory").classList.toggle("hidden", filtered.length !== 0);
+    
+    filtered.forEach((x, index) => {
+        const histId = x.id || ('hist_idx_' + index);
+        const d = document.createElement("div");
+        d.className = "history-row grid grid-cols-7 gap-2 px-2.5 py-2 border-t border-[#1b2d3d] text-[10px] items-center";
+        const badgeClass = x.type === 'OUT' ? 'bg-red-950 text-red-400 border-red-900' : (x.type === 'CUT' ? 'bg-yellow-950 text-yellow-400 border-yellow-900' : 'bg-green-950 text-green-400 border-green-900');
+        d.innerHTML = `
+            <div class="text-slate-300">${esc(formatDateTime(x.timestamp))}</div>
+            <div class="font-semibold text-white">${esc(x.boxNumber||"-")}</div>
+            <div><span class="px-1.5 py-0.5 rounded border ${badgeClass}">${esc(x.type||'INFO')}</span></div>
+            <div class="text-white">${(+x.quantity||0).toFixed(1)} Kg</div>
+            <div class="text-yellow-400">${esc(x.isCutStatus||"-")}</div>
+            <div class="text-slate-400 truncate">${esc(x.desc||"")}</div>
+            <div class="text-center">
+                <button onclick="deleteOneHistory('${histId}')" class="btn px-2 py-1 text-red-400 text-[10px]" title="Hapus Histori Ini"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        list.appendChild(d);
+    });
+}
+
+function deleteOneHistory(histId){
+    if(!confirm("Hapus baris histori ini?")) return;
+    currentData.history = (currentData.history || []).filter(item => {
+        const itemId = item.id || '';
+        return itemId !== histId;
+    });
+    saveData();
+}
+
+function clearHistory(){
+    if(!confirm("Hapus semua histori transaksi?")) return;
+    currentData.history = [];
+    saveData();
+}
+
+function showImage(e){ $("modalImage").src = decodeURIComponent(e); openModal("imageModal"); }
+function showAbout(){ alert("STORE IKAN\nCatatan Stok Realtime (Berat KG)\nData tersimpan aman melalui Firebase."); }
+function shareCode(){
+    if(!currentRoom) return;
+    const t = "Gunakan kode toko: " + currentRoom;
+    if(navigator.share) navigator.share({title:"STORE IKAN", text:t, url:location.href}).catch(()=>{});
+    else if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>alert("Kode toko disalin: " + currentRoom));
+    else alert(t);
+}
+function toggleMenu(){ alert("STORE IKAN\nGunakan menu navigasi di bagian bawah layar."); }
+
+let lastScrollTop = 0;
+window.addEventListener("scroll", () => {
+    let currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+    const header = $("mainHeader");
+    if(currentScroll > lastScrollTop && currentScroll > 40){
+        header.classList.add("shrink");
+    } else {
+        header.classList.remove("shrink");
+    }
+    lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
+}, false);
+
+$("historyDate").addEventListener("change", renderHistory);
+$("searchInput").addEventListener("input", refreshUI);
+$("loginRoomCode").addEventListener("keydown", e => { if(e.key === 'Enter') joinRoom(); });
+$("outModalInput").addEventListener("keydown", e => { if(e.key === 'Enter') submitOutModal(); });
+
+window.addEventListener("load", () => {
+    const s = localStorage.getItem("fishStoreRoomCode");
+    if(s){
+        $("loginRoomCode").value = s;
+        joinRoom();
+    } else {
+        openModal("loginModal");
+    }
+});
+
+window.addEventListener("online", () => { $("deviceText").textContent = "Online"; setStatus("Realtime", true); });
+window.addEventListener("offline", () => { $("deviceText").textContent = "Offline"; setStatus("Internet terputus", false); });
+</script>
+</body>
+</html>
