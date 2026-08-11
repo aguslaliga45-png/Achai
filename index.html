@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        *{box-sizing:border-box}
+        *{box-sizing:border-box;-webkit-tap-highlight-color: transparent;}
         body{margin:0;background:#030b14;color:#e8eef5;font-family:Arial,sans-serif}
         .dashboard-container{max-width:1000px;margin:auto;min-height:100vh;padding:18px 18px 90px}
         .glass{background:linear-gradient(145deg,#0d1825,#09131e);border:1px solid #1d3042;box-shadow:0 8px 24px rgba(0,0,0,.25)}
@@ -16,7 +16,8 @@
         .red{color:#ff4545}
         .yellow{color:#ffd52e}
         .cyan{color:#00f2fe}
-        .btn{border:1px solid #2d4960;background:#0b1723;color:#eaf2f8;border-radius:10px}
+        .btn{border:1px solid #2d4960;background:#0b1723;color:#eaf2f8;border-radius:10px;cursor:pointer;touch-action:manipulation;}
+        button {cursor: pointer; touch-action: manipulation;}
         .table-scroll{overflow-x:auto}
         .history-row{min-width:760px}
         .page-section{display:none}
@@ -36,6 +37,7 @@
             margin-bottom: 0;
             opacity: 0;
             border-width: 0;
+            pointer-events: none;
         }
 
         /* Ukuran Foto Diperbesar (Square / Persegi Besar) */
@@ -359,4 +361,393 @@ function sendNotification(title, body){
             if(navigator.serviceWorker && navigator.serviceWorker.controller){
                 navigator.serviceWorker.ready.then(reg => {
                     reg.showNotification(title, {
-             
+                        body: body,
+                        icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png"
+                    });
+                }).catch(() => {
+                    new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png" });
+                });
+            } else {
+                new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png" });
+            }
+        } catch(e) {
+            console.error("Notification error:", e);
+        }
+    }
+}
+
+// LOGIN / MASUK KODE TOKO
+function joinRoom(){
+    const inputEl = $("loginRoomCode");
+    let code = inputEl ? inputEl.value.trim().toUpperCase() : "";
+    code = code.replace(/[^a-zA-Z0-9_\-]/g, "");
+    
+    if(!code){
+        const errEl = $("loginError");
+        if(errEl) {
+            errEl.textContent = "Silakan ketik kode toko terlebih dahulu!";
+            errEl.classList.remove("hidden");
+        } else {
+            alert("Silakan ketik kode toko terlebih dahulu!");
+        }
+        return;
+    }
+    
+    currentRoom = code;
+    localStorage.setItem("fishStoreRoomCode", code);
+    if($("roomCodeInput2")) $("roomCodeInput2").value = code;
+    if($("roomDisplay")) $("roomDisplay").textContent = code;
+    
+    closeModal("loginModal");
+    
+    isInitialLoad = true;
+    subscribe();
+}
+
+function saveRoomCode(){
+    let c = $("roomCodeInput2").value.trim().toUpperCase();
+    c = c.replace(/[^a-zA-Z0-9_\-]/g, "");
+    if(!c) return alert("Kode toko tidak boleh kosong!");
+    currentRoom = c;
+    localStorage.setItem("fishStoreRoomCode", c);
+    if($("loginRoomCode")) $("loginRoomCode").value = c;
+    $("roomDisplay").textContent = c;
+    isInitialLoad = true;
+    subscribe();
+    alert("Kode toko tersambung: " + c);
+}
+
+function subscribe(){
+    if(!db || !currentRoom) return setStatus("Database terputus", false);
+    setStatus("Menghubungkan...", false);
+    
+    db.ref(roomPath()).off();
+    db.ref(roomPath()).on("value", s => {
+        const val = s.val() || {};
+        const newData = {
+            stock: val.stock || {},
+            history: Array.isArray(val.history) ? val.history : (val.history ? Object.values(val.history) : [])
+        };
+        
+        if(!isInitialLoad && newData.history.length > (currentData.history||[]).length){
+            const latest = newData.history[newData.history.length - 1];
+            if(latest){
+                sendNotification("Update Stok: " + (latest.type || "INFO"), `${latest.desc || ''} (${latest.quantity || 0} Kg)`);
+            }
+        }
+        
+        currentData = newData;
+        isInitialLoad = false;
+        refreshUI();
+        setStatus("Realtime", true);
+    }, e => {
+        console.error(e);
+        setStatus("Offline/Gagal", false);
+    });
+}
+
+function saveData(){
+    if(!db || !currentRoom) return alert("Belum terhubung ke kode toko.");
+    db.ref(roomPath()).set(currentData).catch(e => {
+        setStatus("Gagal menyimpan", false);
+        alert("Gagal menyimpan data: " + e.message);
+    });
+}
+
+function makeLog(desc,type,box,qty){
+    currentData.history.push({desc,type,boxNumber:box,quantity:Number(qty)||0,timestamp:new Date().toISOString()});
+    if(currentData.history.length > 1000) currentData.history = currentData.history.slice(-1000);
+}
+
+function formatDateTime(x){
+    const d = new Date(x);
+    return isNaN(d) ? "-" : d.toLocaleString("id-ID",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
+}
+
+function compressImage(u,cb){
+    const i = new Image();
+    i.onload = () => {
+        const m = 900, s = Math.min(1, m/Math.max(i.width,i.height)), c = document.createElement("canvas");
+        c.width = Math.max(1, i.width*s);
+        c.height = Math.max(1, i.height*s);
+        c.getContext("2d").drawImage(i,0,0,c.width,c.height);
+        cb(c.toDataURL("image/jpeg", .75));
+    };
+    i.onerror = () => cb(u);
+    i.src = u;
+}
+
+// --- FITUR KAMERA LANGSUNG ---
+async function startLiveCamera(targetId=null){
+    photoTarget = targetId;
+    openModal("cameraModal");
+
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        alert("Akses kamera tidak didukung di browser ini. Pastikan membuka via HTTPS/Web aman.");
+        stopLiveCamera();
+        return;
+    }
+
+    if(cameraStream) stopCameraTracks();
+
+    try {
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false
+            });
+        } catch(fallbackErr) {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+        cameraStream = stream;
+        const video = $("cameraVideo");
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true);
+        await video.play().catch(()=>{});
+    } catch(err) {
+        console.error("Camera access error:", err);
+        alert("Gagal membuka kamera: " + (err.message || "Izin kamera ditolak") + "\n\nPastikan izin akses kamera sudah disetujui.");
+        stopLiveCamera();
+    }
+}
+
+function switchCamera(){
+    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+    startLiveCamera(photoTarget);
+}
+
+function stopCameraTracks(){
+    if(cameraStream){
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+    }
+}
+
+function stopLiveCamera(){
+    stopCameraTracks();
+    closeModal("cameraModal");
+}
+
+function capturePhoto(){
+    const video = $("cameraVideo");
+    const canvas = $("cameraCanvas");
+    if(!video || !video.videoWidth) return alert("Kamera belum siap.");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+    
+    stopLiveCamera();
+
+    compressImage(dataUrl, p => {
+        if(photoTarget){
+            const x = currentData.stock?.[photoTarget];
+            if(x){
+                x.image = p;
+                makeLog("Update foto Box " + x.boxNumber, "FOTO", x.boxNumber, 0);
+                saveData();
+            }
+            photoTarget = null;
+        } else {
+            currentBase64Image = p;
+            $("photoPreview").src = p;
+            $("photoPreview").classList.remove("hidden");
+            $("photoStatusText").textContent = "Foto berhasil diambil dari kamera";
+        }
+    });
+}
+
+function addEntryBox(){
+    const b = $("newBoxNumber").value.trim().toUpperCase(), kg = parseFloat($("newWeightIn").value);
+    if(!currentRoom) return alert("Masuk ke kode toko terlebih dahulu.");
+    if(!b || !Number.isFinite(kg) || kg <= 0) return alert("Isi Nomor Box dan Berat Masuk dengan benar.");
+    
+    const id = "box_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
+    const finish = p => {
+        if(!currentData.stock) currentData.stock = {};
+        currentData.stock[id] = { boxNumber:b, weightIn:kg, weightOut:0, isCut:false, image:p||"", addedAt:new Date().toISOString() };
+        makeLog("Tambah Box " + b + " (+" + kg.toFixed(3) + " Kg)", "MASUK", b, kg);
+        saveData();
+        sendNotification("Barang Masuk", "Box " + b + " berhasil ditambahkan (" + kg.toFixed(3) + " Kg)");
+        resetAdd();
+        closeModal("addModal");
+    };
+    currentBase64Image ? compressImage(currentBase64Image, finish) : finish("");
+}
+
+function resetAdd(){
+    $("newBoxNumber").value = "";
+    $("newWeightIn").value = "";
+    $("newPhotoInput").value = "";
+    $("photoPreview").classList.add("hidden");
+    $("photoPreview").src = "";
+    $("photoStatusText").textContent = "Belum ada foto dipilih";
+    currentBase64Image = "";
+}
+
+function toggleCut(id, c){
+    const x = currentData.stock?.[id];
+    if(!x) return;
+    x.isCut = !!c;
+    makeLog((c ? "CUT " : "Batal CUT ") + x.boxNumber, c ? "CUT" : "BATAL", x.boxNumber, x.weightIn);
+    saveData();
+    sendNotification("Status CUT", "Box " + x.boxNumber + (c ? " sudah di-CUT." : " batal CUT."));
+}
+
+function toggleOut(id, c){
+    const x = currentData.stock?.[id];
+    if(!x) return;
+    x.weightOut = c ? Number(x.weightIn) : 0;
+    makeLog((c ? "OUT " : "Batal OUT ") + x.boxNumber, c ? "OUT" : "BATAL", x.boxNumber, c ? x.weightIn : 0);
+    saveData();
+    sendNotification("Status OUT", "Box " + x.boxNumber + (c ? " telah di-OUT." : " batal OUT."));
+}
+
+function deleteEntry(id){
+    const x = currentData.stock?.[id];
+    if(!x || !confirm("Hapus data Box " + x.boxNumber + "?")) return;
+    makeLog("Hapus Box " + x.boxNumber, "HAPUS", x.boxNumber, x.weightIn);
+    delete currentData.stock[id];
+    saveData();
+}
+
+function refreshUI(){
+    let ti=0, to=0, count=0;
+    let cutCount=0, cutKg=0;
+    let cutNotOutCount=0, cutNotOutKg=0;
+    let uncutCount=0, uncutKg=0;
+
+    const list = $("stockList"), q = $("searchInput").value.trim().toLowerCase();
+    list.innerHTML = "";
+    
+    Object.entries(currentData.stock||{}).forEach(([id,x]) => {
+        if(!x || !x.boxNumber) return;
+        count++;
+        const inKg = +x.weightIn || 0;
+        const outKg = +x.weightOut || 0;
+        const remKg = Math.max(0, inKg - outKg);
+
+        ti += inKg;
+        to += outKg;
+
+        if(x.isCut){
+            cutCount++;
+            cutKg += inKg;
+            if(outKg <= 0 && remKg > 0){
+                cutNotOutCount++;
+                cutNotOutKg += remKg;
+            }
+        } else {
+            uncutCount++;
+            uncutKg += remKg;
+        }
+
+        if(q && !x.boxNumber.toLowerCase().includes(q)) return;
+
+        const d = document.createElement("div");
+        d.className = "glass rounded-2xl p-3 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center";
+        const p = x.image ? `<img src="${x.image}" onclick="showImage('${encodeURIComponent(x.image)}')" class="fish-photo rounded-xl cursor-pointer">` : `<div class="fish-photo rounded-xl bg-[#07121d] flex items-center justify-center text-slate-600 text-3xl"><i class="fas fa-image"></i></div>`;
+        d.innerHTML = `<div class="shrink-0 flex justify-center sm:block">${p}</div><div class="flex-1 min-w-0"><div class="text-xl font-bold">${esc(x.boxNumber)}</div><div class="text-slate-300 mt-1">Stok: <b class="yellow text-lg">${remKg.toFixed(3)}</b> Kg</div><div class="flex gap-2 mt-2 flex-wrap"><span class="bg-blue-950/60 border border-blue-800 rounded-lg px-2 py-1 text-xs blue">Masuk: ${inKg.toFixed(3)} Kg</span><span class="bg-red-950/60 border border-red-800 rounded-lg px-2 py-1 text-xs red">Keluar: ${outKg.toFixed(3)} Kg</span></div></div><div class="fish-actions grid grid-cols-2 sm:flex sm:flex-col gap-2"><button onclick="toggleCut('${id}',${!x.isCut})" class="rounded-lg py-2.5 px-4 border border-green-600 font-bold green">⬇ ${x.isCut?"CUT ✓":"CUT"}</button><button onclick="toggleOut('${id}',${outKg<=0})" class="rounded-lg py-2.5 px-4 border border-red-600 font-bold red">⬆ ${outKg>0?"OUT ✓":"OUT"}</button><button onclick="startLiveCamera('${id}')" title="Ambil Foto Kamera" class="rounded-lg py-2.5 px-4 border border-cyan-500 cyan"><i class="fas fa-camera"></i></button><button onclick="deleteEntry('${id}')" class="rounded-lg py-2.5 px-4 border border-slate-700 text-slate-400"><i class="fas fa-trash"></i></button></div>`;
+        list.appendChild(d);
+    });
+
+    $("emptyStock").classList.toggle("hidden", count !== 0);
+    $("totalBox").textContent = count;
+    $("totalIn").textContent = ti.toFixed(3);
+    $("totalOut").textContent = to.toFixed(3);
+    $("stokKg").textContent = Math.max(0, ti-to).toFixed(3);
+
+    $("totalCutBox").textContent = cutCount;
+    $("totalCutKg").textContent = cutKg.toFixed(3);
+
+    $("totalCutNotOutBox").textContent = cutNotOutCount;
+    $("totalCutNotOutKg").textContent = cutNotOutKg.toFixed(3);
+
+    $("totalUncutBox").textContent = uncutCount;
+    $("totalUncutKg").textContent = uncutKg.toFixed(3);
+
+    renderHistory();
+}
+
+// File Picker fallback
+$("newPhotoInput").addEventListener("change", e => {
+    const f = e.target.files?.[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = v => {
+        currentBase64Image = v.target.result;
+        $("photoPreview").src = currentBase64Image;
+        $("photoPreview").classList.remove("hidden");
+        $("photoStatusText").textContent = "Foto berhasil dipilih dari file";
+    };
+    r.readAsDataURL(f);
+});
+
+function renderHistory(){
+    const list = $("historyList"), f = $("historyDate").value;
+    list.innerHTML = "";
+    const a = (currentData.history||[]).filter(x => !f || String(x.timestamp).slice(0,10) === f).slice().reverse();
+    $("emptyHistory").classList.toggle("hidden", a.length !== 0);
+    a.forEach(x => {
+        const d = document.createElement("div");
+        d.className = "history-row grid grid-cols-5 gap-2 px-3 py-3 border-t border-[#1b2d3d] text-xs sm:text-sm";
+        d.innerHTML = `<div class="text-slate-300">${esc(formatDateTime(x.timestamp))}</div><div class="font-semibold">${esc(x.boxNumber||"-")}</div><div><span class="px-2 py-1 rounded-md ${x.type==='OUT'?'bg-red-900/50 red':'bg-green-900/50 green'} border border-current">${esc(x.type||'INFO')}</span></div><div>${(+x.quantity||0).toFixed(3)} Kg</div><div class="text-slate-400">${esc(x.desc||"")}</div>`;
+        list.appendChild(d);
+    });
+}
+
+function clearHistory(){
+    if(!confirm("Hapus semua histori transaksi?")) return;
+    currentData.history = [];
+    saveData();
+}
+
+function showImage(e){ $("modalImage").src = decodeURIComponent(e); openModal("imageModal"); }
+function showAbout(){ alert("STORE IKAN\nCatatan Stok Realtime\nData tersimpan aman melalui Firebase."); }
+function shareCode(){
+    if(!currentRoom) return;
+    const t = "Gunakan kode toko: " + currentRoom;
+    if(navigator.share) navigator.share({title:"STORE IKAN", text:t, url:location.href}).catch(()=>{});
+    else if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>alert("Kode toko disalin: " + currentRoom));
+    else alert(t);
+}
+function toggleMenu(){ alert("STORE IKAN\nGunakan menu navigasi di bagian bawah layar."); }
+
+// Scroll event listener untuk menyembunyikan/mengecilkan header saat digeser ke bawah
+let lastScrollTop = 0;
+window.addEventListener("scroll", () => {
+    let currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+    const header = $("mainHeader");
+    if(currentScroll > lastScrollTop && currentScroll > 40){
+        header.classList.add("shrink");
+    } else {
+        header.classList.remove("shrink");
+    }
+    lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
+}, false);
+
+$("historyDate").addEventListener("change", renderHistory);
+$("searchInput").addEventListener("input", refreshUI);
+$("loginRoomCode").addEventListener("keydown", e => { if(e.key === 'Enter') joinRoom(); });
+
+window.addEventListener("load", () => {
+    if("Notification" in window && Notification.permission === "granted"){
+        $("notifBtn").classList.replace("text-yellow-400", "text-green-400");
+    }
+    const s = localStorage.getItem("fishStoreRoomCode");
+    if(s){
+        $("loginRoomCode").value = s;
+        joinRoom();
+    } else {
+        openModal("loginModal");
+    }
+});
+
+window.addEventListener("online", () => { $("deviceText").textContent = "Online"; setStatus("Realtime", true); });
+window.addEventListener("offline", () => { $("deviceText").textContent = "Offline"; setStatus("Internet terputus", false); });
+</script>
+</body>
+</html>
