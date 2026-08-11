@@ -38,7 +38,6 @@
         <div id="wifiIcon" class="green text-3xl w-12 text-center"><i class="fas fa-wifi"></i></div>
     </header>
 
-    <!-- SUMMARY GRID UTAMA -->
     <section class="summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         <div class="glass rounded-2xl p-4">
             <p class="text-sm text-slate-300">Total Box</p>
@@ -81,7 +80,7 @@
             </div>
         </div>
 
-        <!-- PERUBAHAN TAMBAHAN: Kartu Status CUT & BELUM CUT -->
+        <!-- FITUR BARU: TOTAL SUDAH CUT & BELUM CUT -->
         <div class="glass rounded-2xl p-4">
             <p class="text-sm text-slate-300">Sudah CUT</p>
             <div class="flex items-center gap-3 mt-2">
@@ -243,7 +242,6 @@ function refreshUI(){
         ti += inKg;
         to += outKg;
 
-        // Akumulasi data Sudah CUT & Belum CUT
         if(x.isCut){
             cutCount++;
             cutKg += remKg;
@@ -267,7 +265,6 @@ function refreshUI(){
     $("totalOut").textContent=to.toFixed(3);
     $("stokKg").textContent=Math.max(0,ti-to).toFixed(3);
 
-    // Update UI Total CUT dan Belum CUT
     $("totalCutBox").textContent = cutCount;
     $("totalCutKg").textContent = cutKg.toFixed(3);
     $("totalUncutBox").textContent = uncutCount;
@@ -277,4 +274,4 @@ function refreshUI(){
 }
 
 function choosePhotoFor(id){photoTarget=id;$("newPhotoInput").click()}
-$("newPhotoInput").addEventListener("change",e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=v=>{if(photoTarget){compressImage(v.target.result,p=>{const x=currentData.stock?.[photoTarget];if(x){x.image=p;makeLog("Update foto Box "+x.boxNumber,"FOTO",x.boxNumber,0);saveData()}photoTarget=null})}else{currentBase64Image=v.targe
+$("newPhotoInput").addEventListener("change",e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=v=>{if(photoTarget){compressImage(v.target.result,p=>{const x=currentData.stock?.[photoTarget];if(x){x.image=p;makeLog("Update foto Box "+x.boxNumber,"FOTO",x.boxNumber,0);saveData()}photoTarget=null})}else{currentBase64Image=v.target.result;$("photoPreview").src=currentBase64Image;$("photoPreview").classList.remove("hidden");$("photoStatus").textContent="Foto 
