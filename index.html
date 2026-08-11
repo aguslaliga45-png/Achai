@@ -289,6 +289,10 @@
 const firebaseConfig={apiKey:"AIzaSyDWs5wLuhewr-5LqhM882x98qG8DrIvpgc",authDomain:"acai-cf0b8.firebaseapp.com",databaseURL:"https://acai-cf0b8-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"acai-cf0b8",storageBucket:"acai-cf0b8.firebasestorage.app",messagingSenderId:"735224898858",appId:"1:735224898858:web:5b597c7e19c86ee9162a53",measurementId:"G-YD77RP6BPE"};
 let db=null, currentRoom=null, currentData={stock:{},history:[]}, currentBase64Image="", photoTarget=null, isInitialLoad=true;
 let cameraStream=null, currentFacingMode="environment";
+const deviceId = localStorage.getItem("fishStoreDeviceId") || ("device_" + Date.now() + "_" + Math.random().toString(36).slice(2,10));
+localStorage.setItem("fishStoreDeviceId", deviceId);
+let pendingLocalWriteSignature = null;
+let notificationReady = false;
 
 try {
     firebase.initializeApp(firebaseConfig);
@@ -338,41 +342,61 @@ function switchPage(pageId){
     window.scrollTo({top:0, behavior:'smooth'});
 }
 
-function requestNotifPermission(){
+async function registerServiceWorker(){
+    if(!("serviceWorker" in navigator)) return null;
+    try{
+        const reg = await navigator.serviceWorker.register("./store-ikan-sw.js", {scope:"./"});
+        await navigator.serviceWorker.ready;
+        notificationReady = true;
+        return reg;
+    }catch(e){
+        console.error("Service Worker registration error:", e);
+        return null;
+    }
+}
+
+async function requestNotifPermission(){
     if(!("Notification" in window)){
         alert("Browser ini tidak mendukung notifikasi sistem.");
         return;
     }
-    Notification.requestPermission().then(permission=>{
+    if(!window.isSecureContext){
+        alert("Notifikasi membutuhkan situs HTTPS. Buka aplikasi melalui alamat https://...");
+        return;
+    }
+    try{
+        const permission = await Notification.requestPermission();
         if(permission==="granted"){
             $("notifBtn").classList.replace("text-yellow-400","text-green-400");
-            sendNotification("Notifikasi Aktif","Anda akan menerima update transaksi stok.");
-        } else {
-            alert("Izin notifikasi ditolak. Harap izinkan melalui pengaturan browser.");
+            await registerServiceWorker();
+            sendNotification("Notifikasi Aktif","Anda akan menerima perubahan stok dari perangkat lain.");
+        }else if(permission==="denied"){
+            alert("Izin notifikasi ditolak. Izinkan notifikasi untuk situs ini melalui pengaturan browser.");
         }
-    }).catch(err => {
+    }catch(err){
         console.error("Notification permission error:", err);
-    });
+        alert("Tidak dapat mengaktifkan notifikasi.");
+    }
 }
 
-function sendNotification(title, body){
-    if("Notification" in window && Notification.permission==="granted"){
-        try {
-            if(navigator.serviceWorker && navigator.serviceWorker.controller){
-                navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification(title, {
-                        body: body,
-                        icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png"
-                    });
-                }).catch(() => {
-                    new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png" });
-                });
-            } else {
-                new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png" });
-            }
-        } catch(e) {
-            console.error("Notification error:", e);
+async function sendNotification(title, body){
+    if(!("Notification" in window) || Notification.permission!=="granted") return;
+    try{
+        const reg = await registerServiceWorker();
+        if(reg && reg.showNotification){
+            await reg.showNotification(title,{
+                body,
+                icon:"https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
+                badge:"https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
+                tag:"store-ikan-update",
+                renotify:true,
+                data:{url:location.href}
+            });
+        }else{
+            new Notification(title,{body});
         }
+    }catch(e){
+        console.error("Notification error:",e);
     }
 }
 
@@ -417,25 +441,52 @@ function saveRoomCode(){
     alert("Kode toko tersambung: " + c);
 }
 
+function dataSignature(data){
+    try { return JSON.stringify(data); } catch(e) { return ""; }
+}
+
+function latestHistoryItem(data){
+    const h = data?.history;
+    return Array.isArray(h) && h.length ? h[h.length-1] : null;
+}
+
+function describeRemoteChange(newData){
+    const latest = latestHistoryItem(newData);
+    if(latest && latest.deviceId && latest.deviceId !== deviceId){
+        return {
+            title:"Perubahan Stok",
+            body:(latest.desc || "Ada perubahan pada stok.") +
+                 (latest.quantity ? " (" + Number(latest.quantity).toFixed(3) + " Kg)" : "")
+        };
+    }
+    return {
+        title:"Stok Diperbarui",
+        body:"Data stok toko telah berubah dari perangkat lain."
+    };
+}
+
 function subscribe(){
     if(!db || !currentRoom) return setStatus("Database terputus", false);
     setStatus("Menghubungkan...", false);
-    
-    db.ref(roomPath()).off();
-    db.ref(roomPath()).on("value", s => {
+
+    const ref = db.ref(roomPath());
+    ref.off();
+    ref.on("value", s => {
         const val = s.val() || {};
         const newData = {
             stock: val.stock || {},
             history: Array.isArray(val.history) ? val.history : (val.history ? Object.values(val.history) : [])
         };
-        
-        if(!isInitialLoad && newData.history.length > (currentData.history||[]).length){
-            const latest = newData.history[newData.history.length - 1];
-            if(latest){
-                sendNotification("Update Stok: " + (latest.type || "INFO"), `${latest.desc || ''} (${latest.quantity || 0} Kg)`);
-            }
+        const signature = dataSignature(newData);
+        const isLocalEcho = pendingLocalWriteSignature && pendingLocalWriteSignature === signature;
+
+        if(!isInitialLoad && !isLocalEcho && dataSignature(currentData) !== signature){
+            const note = describeRemoteChange(newData);
+            sendNotification(note.title, note.body);
         }
-        
+
+        if(isLocalEcho) pendingLocalWriteSignature = null;
+
         currentData = newData;
         isInitialLoad = false;
         refreshUI();
@@ -448,14 +499,16 @@ function subscribe(){
 
 function saveData(){
     if(!db || !currentRoom) return alert("Belum terhubung ke kode toko.");
+    pendingLocalWriteSignature = dataSignature(currentData);
     db.ref(roomPath()).set(currentData).catch(e => {
+        pendingLocalWriteSignature = null;
         setStatus("Gagal menyimpan", false);
         alert("Gagal menyimpan data: " + e.message);
     });
 }
 
 function makeLog(desc,type,box,qty){
-    currentData.history.push({desc,type,boxNumber:box,quantity:Number(qty)||0,timestamp:new Date().toISOString()});
+    currentData.history.push({desc,type,boxNumber:box,quantity:Number(qty)||0,timestamp:new Date().toISOString(),deviceId});
     if(currentData.history.length > 1000) currentData.history = currentData.history.slice(-1000);
 }
 
@@ -480,35 +533,46 @@ function compressImage(u,cb){
 // --- FITUR KAMERA LANGSUNG ---
 async function startLiveCamera(targetId=null){
     photoTarget = targetId;
-    openModal("cameraModal");
 
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        alert("Akses kamera tidak didukung di browser ini. Pastikan membuka via HTTPS/Web aman.");
-        stopLiveCamera();
+    if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        alert("Kamera membutuhkan HTTPS. Buka aplikasi melalui alamat https://...");
+        photoTarget = null;
         return;
     }
 
     if(cameraStream) stopCameraTracks();
 
-    try {
+    try{
         let stream;
-        try {
+        try{
             stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: false
+                video:{
+                    facingMode:{ideal:currentFacingMode},
+                    width:{ideal:1280},
+                    height:{ideal:720}
+                },
+                audio:false
             });
-        } catch(fallbackErr) {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }catch(firstErr){
+            stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
         }
+
         cameraStream = stream;
         const video = $("cameraVideo");
         video.srcObject = stream;
-        video.setAttribute("playsinline", true);
+        video.setAttribute("playsinline","true");
+        openModal("cameraModal");
         await video.play().catch(()=>{});
-    } catch(err) {
-        console.error("Camera access error:", err);
-        alert("Gagal membuka kamera: " + (err.message || "Izin kamera ditolak") + "\n\nPastikan izin akses kamera sudah disetujui.");
-        stopLiveCamera();
+    }catch(err){
+        console.error("Camera access error:",err);
+        photoTarget = null;
+        let msg = "Tidak dapat membuka kamera.";
+        if(err.name === "NotAllowedError" || err.name === "SecurityError") msg = "Izin kamera ditolak. Izinkan kamera untuk situs ini di pengaturan browser.";
+        else if(err.name === "NotFoundError") msg = "Kamera tidak ditemukan pada perangkat.";
+        else if(err.name === "NotReadableError") msg = "Kamera sedang digunakan aplikasi lain.";
+        alert(msg);
+        stopCameraTracks();
+        closeModal("cameraModal");
     }
 }
 
@@ -571,7 +635,6 @@ function addEntryBox(){
         currentData.stock[id] = { boxNumber:b, weightIn:kg, weightOut:0, isCut:false, image:p||"", addedAt:new Date().toISOString() };
         makeLog("Tambah Box " + b + " (+" + kg.toFixed(3) + " Kg)", "MASUK", b, kg);
         saveData();
-        sendNotification("Barang Masuk", "Box " + b + " berhasil ditambahkan (" + kg.toFixed(3) + " Kg)");
         resetAdd();
         closeModal("addModal");
     };
@@ -594,7 +657,6 @@ function toggleCut(id, c){
     x.isCut = !!c;
     makeLog((c ? "CUT " : "Batal CUT ") + x.boxNumber, c ? "CUT" : "BATAL", x.boxNumber, x.weightIn);
     saveData();
-    sendNotification("Status CUT", "Box " + x.boxNumber + (c ? " sudah di-CUT." : " batal CUT."));
 }
 
 function toggleOut(id, c){
@@ -603,7 +665,6 @@ function toggleOut(id, c){
     x.weightOut = c ? Number(x.weightIn) : 0;
     makeLog((c ? "OUT " : "Batal OUT ") + x.boxNumber, c ? "OUT" : "BATAL", x.boxNumber, c ? x.weightIn : 0);
     saveData();
-    sendNotification("Status OUT", "Box " + x.boxNumber + (c ? " telah di-OUT." : " batal OUT."));
 }
 
 function deleteEntry(id){
@@ -748,6 +809,10 @@ window.addEventListener("load", () => {
 
 window.addEventListener("online", () => { $("deviceText").textContent = "Online"; setStatus("Realtime", true); });
 window.addEventListener("offline", () => { $("deviceText").textContent = "Offline"; setStatus("Internet terputus", false); });
+window.addEventListener("pagehide", stopCameraTracks);
+document.addEventListener("visibilitychange", () => {
+    if(document.hidden) stopCameraTracks();
+});
 </script>
 </body>
 </html>
