@@ -1,1 +1,15 @@
-
+{
+  "name": "STORE IKAN",
+  "short_name": "StoreIkan",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#030b14",
+  "theme_color": "#030b14",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
