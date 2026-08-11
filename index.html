@@ -8,25 +8,24 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         *{box-sizing:border-box;-webkit-tap-highlight-color: transparent;}
-        body{margin:0;background:#030b14;color:#e8eef5;font-family:Arial,sans-serif}
-        .dashboard-container{max-width:1000px;margin:auto;min-height:100vh;padding:18px 18px 90px}
-        .glass{background:linear-gradient(145deg,#0d1825,#09131e);border:1px solid #1d3042;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-        .green{color:#54e878}
-        .blue{color:#3f9cff}
-        .red{color:#ff4545}
-        .yellow{color:#ffd52e}
-        .cyan{color:#00f2fe}
-        .btn{border:1px solid #2d4960;background:#0b1723;color:#eaf2f8;border-radius:10px;cursor:pointer;touch-action:manipulation;}
+        body{margin:0;background:#050a0f;color:#e8eef5;font-family:Arial,sans-serif;font-size:12px}
+        .dashboard-container{max-width:1000px;margin:auto;min-height:100vh;padding:10px 10px 75px}
+        .glass{background:#0b141d;border:1px solid #1e293b;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+        .green{color:#22c55e}
+        .blue{color:#3b82f6}
+        .red{color:#ef4444}
+        .yellow{color:#eab308}
+        .cyan{color:#06b6d4}
+        .btn{border:1px solid #334155;background:#0f172a;color:#eaf2f8;border-radius:6px;cursor:pointer;touch-action:manipulation;}
         button {cursor: pointer; touch-action: manipulation;}
         .table-scroll{overflow-x:auto}
-        .history-row{min-width:760px}
+        .history-row{min-width:780px}
         .page-section{display:none}
         .page-section.active{display:block}
         
-        /* Animasi Header Menyusut saat Scroll */
         .collapsible-header {
             transition: all 0.3s ease-in-out;
-            max-height: 250px;
+            max-height: 180px;
             overflow: hidden;
             opacity: 1;
         }
@@ -40,246 +39,222 @@
             pointer-events: none;
         }
 
-        /* Ukuran Foto Diperbesar (Square / Persegi Besar) */
         .fish-photo {
-            width: 140px;
-            height: 140px;
+            width: 60px;
+            height: 60px;
             object-fit: cover;
         }
 
         @media(max-width:640px){
-            .dashboard-container{padding:10px 10px 82px}
-            .top-title{font-size:20px}
+            .dashboard-container{padding:6px 6px 75px}
+            .top-title{font-size:16px}
             .summary-grid{grid-template-columns:1fr 1fr}
-            .fish-actions{width:100%}
-            .fish-photo {
-                width: 100%;
-                height: 220px;
-            }
         }
     </style>
 </head>
 <body>
 <div class="dashboard-container">
-    <header id="mainHeader" class="glass rounded-2xl p-3 sm:p-4 mb-3 flex items-center justify-between gap-3 sticky top-2 z-50 collapsible-header">
-        <button onclick="toggleMenu()" class="btn w-10 h-10 sm:w-12 sm:h-12 text-lg sm:text-xl flex items-center justify-center"><i class="fas fa-bars"></i></button>
+    <header id="mainHeader" class="glass rounded-xl p-2.5 mb-2.5 flex items-center justify-between gap-2 sticky top-2 z-50 collapsible-header">
+        <button onclick="toggleMenu()" class="btn w-9 h-9 text-base flex items-center justify-center"><i class="fas fa-bars"></i></button>
         <div class="text-center flex-1">
-            <h1 class="top-title text-2xl sm:text-3xl font-extrabold tracking-wide">🐟 STORE IKAN 🐟</h1>
-            <p class="green text-xs sm:text-base">Catatan Stok Realtime</p>
+            <h1 class="top-title text-lg font-extrabold tracking-wide text-white">🐟 STORE IKAN 🐟</h1>
+            <p class="green text-[10px]">Catatan Stok Realtime (Berat KG)</p>
         </div>
-        <div class="flex items-center gap-2">
-            <button id="notifBtn" onclick="requestNotifPermission()" class="btn w-9 h-9 sm:w-10 sm:h-10 text-sm flex items-center justify-center text-yellow-400" title="Aktifkan Notifikasi"><i class="fas fa-bell"></i></button>
-            <div id="wifiIcon" class="green text-xl sm:text-3xl w-7 sm:w-8 text-center"><i class="fas fa-wifi"></i></div>
+        <div class="flex items-center gap-1.5">
+            <div id="wifiIcon" class="green text-lg w-6 text-center"><i class="fas fa-wifi"></i></div>
         </div>
     </header>
 
-    <!-- HALAMAN RINGKASAN / TOTAL -->
-    <section id="summarySection" class="page-section mb-5">
-        <h2 class="text-xl font-bold mb-3">RINGKASAN JUMLAH TOTAL</h2>
-        <div class="summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="glass rounded-2xl p-4">
-                <p class="text-sm text-slate-300">Total Box</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <div class="w-11 h-11 rounded-xl bg-blue-900/60 flex items-center justify-center text-blue-300 text-xl"><i class="fas fa-boxes-stacked"></i></div>
+    <section id="summarySection" class="page-section mb-3">
+        <h2 class="text-sm font-bold mb-2 text-white">RINGKASAN BERAT & JUMLAH BOX</h2>
+        <div class="summary-grid grid grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
+            <div class="glass rounded-xl p-2.5">
+                <p class="text-[10px] text-slate-400">Total Box / Jenis</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="w-8 h-8 rounded-lg bg-blue-950 flex items-center justify-center text-blue-400 text-sm"><i class="fas fa-boxes-stacked"></i></div>
                     <div>
-                        <div id="totalBox" class="text-3xl font-bold blue">0</div>
-                        <div class="text-xs blue">Item</div>
+                        <div id="totalBox" class="text-xl font-bold blue">0</div>
+                        <div class="text-[9px] blue">Item</div>
                     </div>
                 </div>
             </div>
-            <div class="glass rounded-2xl p-4">
-                <p class="text-sm text-slate-300">Total Stok</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <div class="w-11 h-11 rounded-xl bg-green-900/60 flex items-center justify-center text-green-300 text-xl"><i class="fas fa-fish"></i></div>
+            <div class="glass rounded-xl p-2.5">
+                <p class="text-[10px] text-slate-400">Total Stok (Sisa)</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="w-8 h-8 rounded-lg bg-green-950 flex items-center justify-center text-green-400 text-sm"><i class="fas fa-fish"></i></div>
                     <div>
-                        <div id="stokKg" class="text-3xl font-bold green">0.000</div>
-                        <div class="text-xs green">Kg</div>
+                        <div id="stokKg" class="text-xl font-bold green">0</div>
+                        <div class="text-[9px] green">Kg</div>
                     </div>
                 </div>
             </div>
-            <div class="glass rounded-2xl p-4">
-                <p class="text-sm text-slate-300">Total Masuk</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <div class="w-11 h-11 rounded-xl bg-blue-900/60 flex items-center justify-center text-blue-300 text-xl"><i class="fas fa-arrow-down"></i></div>
+            <div class="glass rounded-xl p-2.5">
+                <p class="text-[10px] text-slate-400">Cut Belum Keluar</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="w-8 h-8 rounded-lg bg-yellow-950 flex items-center justify-center text-yellow-400 text-sm"><i class="fas fa-clock"></i></div>
                     <div>
-                        <div id="totalIn" class="text-3xl font-bold blue">0.000</div>
-                        <div class="text-xs blue">Kg</div>
+                        <div id="totalCutNotOut" class="text-xl font-bold yellow">0</div>
+                        <div class="text-[9px] yellow">Kg</div>
                     </div>
                 </div>
             </div>
-            <div class="glass rounded-2xl p-4">
-                <p class="text-sm text-slate-300">Total Keluar</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <div class="w-11 h-11 rounded-xl bg-red-900/60 flex items-center justify-center text-red-300 text-xl"><i class="fas fa-arrow-up"></i></div>
+            <div class="glass rounded-xl p-2.5">
+                <p class="text-[10px] text-slate-400">Cut Sudah Keluar</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="w-8 h-8 rounded-lg bg-red-950 flex items-center justify-center text-red-400 text-sm"><i class="fas fa-check-double"></i></div>
                     <div>
-                        <div id="totalOut" class="text-3xl font-bold red">0.000</div>
-                        <div class="text-xs red">Kg</div>
+                        <div id="totalCutOut" class="text-xl font-bold red">0</div>
+                        <div class="text-[9px] red">Kg</div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="glass rounded-2xl p-4">
-                <p class="text-sm text-slate-300">Sudah CUT (Total)</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <div class="w-11 h-11 rounded-xl bg-green-900/60 flex items-center justify-center text-green-300 text-xl"><i class="fas fa-scissors"></i></div>
-                    <div>
-                        <div id="totalCutBox" class="text-3xl font-bold green">0</div>
-                        <div class="text-xs green"><span id="totalCutKg">0.000</span> Kg</div>
-                    </div>
+        <div class="grid grid-cols-2 gap-2">
+            <div class="glass rounded-xl p-2.5 flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-amber-950 flex items-center justify-center text-amber-400 text-sm"><i class="fas fa-cut"></i></div>
+                <div>
+                    <div class="text-[10px] text-slate-400">Box Sudah Di-Cut</div>
+                    <div id="totalBoxCut" class="text-base font-bold text-amber-400">0 Box</div>
                 </div>
             </div>
-
-            <div class="glass rounded-2xl p-4 border border-cyan-500/30">
-                <p class="text-sm text-cyan-300 font-semibold">CUT Belum OUT</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <div class="w-11 h-11 rounded-xl bg-cyan-900/60 flex items-center justify-center text-cyan-300 text-xl"><i class="fas fa-box-archive"></i></div>
-                    <div>
-                        <div id="totalCutNotOutBox" class="text-3xl font-bold cyan">0</div>
-                        <div class="text-xs cyan"><span id="totalCutNotOutKg">0.000</span> Kg</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass rounded-2xl p-4">
-                <p class="text-sm text-slate-300">Belum CUT</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <div class="w-11 h-11 rounded-xl bg-yellow-900/60 flex items-center justify-center text-yellow-300 text-xl"><i class="fas fa-box-open"></i></div>
-                    <div>
-                        <div id="totalUncutBox" class="text-3xl font-bold yellow">0</div>
-                        <div class="text-xs yellow"><span id="totalUncutKg">0.000</span> Kg</div>
-                    </div>
+            <div class="glass rounded-xl p-2.5 flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-rose-950 flex items-center justify-center text-rose-400 text-sm"><i class="fas fa-box-open"></i></div>
+                <div>
+                    <div class="text-[10px] text-slate-400">Box Status Out (Habis)</div>
+                    <div id="totalBoxOut" class="text-base font-bold text-rose-400">0 Box</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="glass rounded-xl px-4 py-3 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+    <section class="glass rounded-xl px-3 py-2 mb-3 grid grid-cols-1 sm:grid-cols-3 gap-1 text-[11px]">
         <div>Toko: <b id="roomDisplay" class="yellow">-</b></div>
         <div>Update: <b id="statusText" class="green">Menghubungkan...</b></div>
         <div>Perangkat: <b id="deviceText" class="green">Online</b></div>
     </section>
 
-    <!-- HALAMAN STOK -->
-    <section id="stockSection" class="page-section active mb-5">
+    <section id="stockSection" class="page-section active mb-3">
         <div class="flex items-center justify-between mb-2">
-            <h2 class="text-xl font-bold">DAFTAR STOK IKAN</h2>
-            <button onclick="openModal('addModal')" class="btn px-4 py-2 green"><i class="fas fa-plus"></i> Tambah</button>
+            <h2 class="text-sm font-bold text-white">DAFTAR STOK IKAN</h2>
+            <button onclick="openModal('addModal')" class="btn px-2.5 py-1 text-[11px] green font-bold"><i class="fas fa-plus"></i> Tambah</button>
         </div>
-        <div class="glass rounded-2xl p-3">
-            <div class="mb-3 flex gap-2">
-                <div class="btn flex-1 px-3 py-2 flex items-center gap-2">
+        <div class="glass rounded-xl p-2.5">
+            <div class="mb-2.5 flex gap-1.5">
+                <div class="btn flex-1 px-2.5 py-1.5 flex items-center gap-2 text-[11px]">
                     <i class="fas fa-search text-slate-500"></i>
-                    <input id="searchInput" class="bg-transparent outline-none w-full" placeholder="Cari nomor box...">
+                    <input id="searchInput" class="bg-transparent outline-none w-full text-[11px] text-white" placeholder="Cari nama/nomor box...">
                 </div>
-                <button onclick="refreshUI()" class="btn px-4"><i class="fas fa-rotate"></i></button>
+                <button onclick="refreshUI()" class="btn px-3 text-[11px]"><i class="fas fa-rotate"></i></button>
             </div>
-            <div id="stockList" class="space-y-3"></div>
-            <div id="emptyStock" class="text-center text-slate-500 py-10 hidden">Belum ada data stok.</div>
+            <div id="stockList" class="space-y-2"></div>
+            <div id="emptyStock" class="text-center text-slate-500 py-8 hidden text-[11px]">Belum ada data stok.</div>
         </div>
     </section>
 
-    <!-- HALAMAN HISTORI -->
-    <section id="historySection" class="page-section mb-5">
+    <section id="historySection" class="page-section mb-3">
         <div class="flex items-center justify-between gap-2 mb-2">
-            <h2 class="text-xl font-bold">HISTORI TRANSAKSI</h2>
-            <div class="flex gap-2">
-                <input id="historyDate" type="date" class="btn px-3 py-2 text-sm bg-[#0b1723]">
-                <button onclick="clearHistory()" class="btn px-3 py-2 text-red-400"><i class="fas fa-trash"></i></button>
+            <h2 class="text-sm font-bold text-white">HISTORI TRANSAKSI</h2>
+            <div class="flex gap-1.5">
+                <input id="historyDate" type="date" class="btn px-2 py-1 text-[11px] bg-[#0b1723] text-white">
+                <button onclick="clearHistory()" class="btn px-2 py-1 text-[11px] text-red-400" title="Hapus Semua Histori"><i class="fas fa-trash"></i> Semua</button>
             </div>
         </div>
-        <div class="glass rounded-2xl overflow-hidden">
+        <div class="glass rounded-xl overflow-hidden">
             <div class="table-scroll">
-                <div class="history-row grid grid-cols-5 gap-2 bg-[#122234] px-3 py-3 text-xs font-bold text-slate-300">
+                <div class="history-row grid grid-cols-7 gap-2 bg-[#122234] px-2.5 py-2 text-[10px] font-bold text-slate-300">
                     <div>WAKTU</div>
-                    <div>NO. BOX</div>
+                    <div>JENIS / BOX</div>
                     <div>TIPE</div>
-                    <div>JUMLAH</div>
+                    <div>BERAT</div>
+                    <div>STATUS CUT</div>
                     <div>KETERANGAN</div>
+                    <div class="text-center">AKSI</div>
                 </div>
                 <div id="historyList"></div>
             </div>
-            <div id="emptyHistory" class="text-center text-slate-500 py-8 hidden">Belum ada riwayat transaksi.</div>
+            <div id="emptyHistory" class="text-center text-slate-500 py-6 hidden text-[11px]">Belum ada riwayat transaksi.</div>
         </div>
     </section>
 
-    <!-- HALAMAN KODE TOKO -->
-    <section id="codeSection" class="page-section mb-5">
-        <div class="glass rounded-2xl p-4">
-            <h2 class="text-xl font-bold mb-3">PENGATURAN KODE TOKO</h2>
-            <div class="flex flex-col sm:flex-row items-center gap-3">
-                <label class="font-bold whitespace-nowrap">Kode Toko:</label>
-                <input id="roomCodeInput2" maxlength="30" class="flex-1 w-full bg-[#06111c] border border-[#22384c] rounded-xl px-4 py-3 outline-none uppercase" placeholder="Contoh: 888">
-                <button onclick="saveRoomCode()" class="btn px-6 py-3 green font-bold w-full sm:w-auto"><i class="fas fa-lock"></i> Simpan</button>
-                <button onclick="shareCode()" class="btn px-5 py-3 blue font-bold w-full sm:w-auto"><i class="fas fa-share-alt"></i> Bagikan</button>
+    <section id="codeSection" class="page-section mb-3">
+        <div class="glass rounded-xl p-3">
+            <h2 class="text-sm font-bold mb-2 text-white">PENGATURAN KODE TOKO</h2>
+            <div class="flex flex-col sm:flex-row items-center gap-2">
+                <label class="font-bold whitespace-nowrap text-[11px]">Kode Toko:</label>
+                <input id="roomCodeInput2" maxlength="30" class="flex-1 w-full bg-[#06111c] border border-[#22384c] rounded-lg px-3 py-2 text-[11px] outline-none uppercase text-white" placeholder="Contoh: AC001">
+                <button onclick="saveRoomCode()" class="btn px-4 py-2 text-[11px] green font-bold w-full sm:w-auto"><i class="fas fa-lock"></i> Simpan</button>
+                <button onclick="shareCode()" class="btn px-4 py-2 text-[11px] blue font-bold w-full sm:w-auto"><i class="fas fa-share-alt"></i> Bagikan</button>
             </div>
         </div>
     </section>
 
     <nav class="fixed bottom-0 left-0 right-0 z-50 max-w-[1000px] mx-auto px-2 pb-2">
-        <div class="glass rounded-2xl grid grid-cols-5 overflow-hidden text-center">
-            <button id="navStock" onclick="switchPage('stockSection')" class="py-3 green"><i class="fas fa-house text-lg"></i><span class="block text-xs">Stok</span></button>
-            <button id="navSummary" onclick="switchPage('summarySection')" class="py-3 text-slate-300"><i class="fas fa-chart-pie text-lg"></i><span class="block text-xs">Total</span></button>
-            <button id="navHistory" onclick="switchPage('historySection')" class="py-3 text-slate-300"><i class="fas fa-clock text-lg"></i><span class="block text-xs">Histori</span></button>
-            <button id="navCode" onclick="switchPage('codeSection')" class="py-3 text-slate-300"><i class="fas fa-key text-lg"></i><span class="block text-xs">Kode</span></button>
-            <button onclick="showAbout()" class="py-3 text-slate-300"><i class="fas fa-circle-info text-lg"></i><span class="block text-xs">Tentang</span></button>
+        <div class="glass rounded-xl grid grid-cols-5 overflow-hidden text-center">
+            <button id="navStock" onclick="switchPage('stockSection')" class="py-2 green"><i class="fas fa-house text-sm"></i><span class="block text-[9px]">Stok</span></button>
+            <button id="navSummary" onclick="switchPage('summarySection')" class="py-2 text-slate-400"><i class="fas fa-chart-pie text-sm"></i><span class="block text-[9px]">Total</span></button>
+            <button id="navHistory" onclick="switchPage('historySection')" class="py-2 text-slate-400"><i class="fas fa-clock text-sm"></i><span class="block text-[9px]">Histori</span></button>
+            <button id="navCode" onclick="switchPage('codeSection')" class="py-2 text-slate-400"><i class="fas fa-key text-sm"></i><span class="block text-[9px]">Kode</span></button>
+            <button onclick="showAbout()" class="py-2 text-slate-400"><i class="fas fa-circle-info text-sm"></i><span class="block text-[9px]">Tentang</span></button>
         </div>
     </nav>
 </div>
 
-<!-- MODAL TAMBAH BOX -->
-<div id="addModal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4">
-    <div class="glass rounded-2xl p-5 w-full max-w-md">
-        <h3 class="text-xl font-bold mb-4">Tambah Entry Box</h3>
-        <input id="newBoxNumber" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 mb-3 text-white outline-none uppercase" placeholder="Nomor Box (contoh B1)">
-        <input id="newWeightIn" type="number" min="0.001" step="0.001" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 mb-3 text-white outline-none" placeholder="Berat Masuk (Kg)">
-        
-        <div class="grid grid-cols-2 gap-2 mb-3">
-            <button onclick="startLiveCamera(null)" class="btn p-3 cyan flex items-center justify-center gap-2"><i class="fas fa-video"></i> Buka Kamera</button>
-            <button onclick="document.getElementById('newPhotoInput').click()" class="btn p-3 blue flex items-center justify-center gap-2"><i class="fas fa-image"></i> Dari File</button>
+<!-- Modal Custom untuk OUT -->
+<div id="outModal" class="fixed inset-0 bg-black/80 z-[160] hidden items-center justify-center p-3">
+    <div class="glass rounded-xl p-4 w-full max-w-sm">
+        <h3 id="outModalTitle" class="text-sm font-bold mb-2 text-white">KONTROL OUT</h3>
+        <p class="text-[11px] text-slate-400 mb-3">Masukkan berat keluar tambahan (atau ketik angka negatif untuk koreksi jika cancel):</p>
+        <input id="outModalInput" type="number" step="0.1" class="w-full bg-[#06111c] border border-[#294258] rounded-lg p-2.5 mb-3 text-sm text-white outline-none" placeholder="0">
+        <div class="grid grid-cols-2 gap-2">
+            <button onclick="closeModal('outModal')" class="btn py-2 text-[11px]">Batal</button>
+            <button onclick="submitOutModal()" class="bg-blue-600 hover:bg-blue-700 rounded-lg py-2 text-[11px] font-bold text-white">Oke</button>
         </div>
-        <input id="newPhotoInput" type="file" accept="image/*" class="hidden">
+    </div>
+</div>
+
+<!-- Modal Tambah Ikan -->
+<div id="addModal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-3">
+    <div class="glass rounded-xl p-4 w-full max-w-sm">
+        <h3 class="text-sm font-bold mb-3 text-white">Tambah Data Ikan</h3>
+        <input id="newBoxNumber" class="w-full bg-[#06111c] border border-[#294258] rounded-lg p-2.5 mb-2.5 text-[11px] text-white outline-none uppercase" placeholder="Nama / Nomor Box (contoh: BENONG)">
+        <input id="newWeightIn" type="number" min="0.1" step="0.1" class="w-full bg-[#06111c] border border-[#294258] rounded-lg p-2.5 mb-2.5 text-[11px] text-white outline-none" placeholder="Berat Masuk (Kg)">
         
-        <div id="photoStatusText" class="text-xs text-center text-slate-400 mb-2">Belum ada foto dipilih</div>
-        <img id="photoPreview" class="hidden w-full h-48 object-cover rounded-xl mb-3 border border-slate-700">
+        <div class="grid grid-cols-2 gap-2 mb-2.5">
+            <!-- Tombol Buka Kamera Langsung (Capture) -->
+            <button onclick="triggerCameraInput(null)" class="btn p-2 text-[11px] cyan flex items-center justify-center gap-1.5"><i class="fas fa-camera"></i> Buka Kamera</button>
+            <!-- Tombol Upload dari Galeri File -->
+            <button onclick="triggerGalleryInput(null)" class="btn p-2 text-[11px] blue flex items-center justify-center gap-1.5"><i class="fas fa-image"></i> Dari Galeri</button>
+        </div>
+        
+        <!-- Hidden Inputs untuk Kamera & File -->
+        <input id="nativeCameraInput" type="file" accept="image/*" capture="environment" class="hidden">
+        <input id="nativeGalleryInput" type="file" accept="image/*" class="hidden">
+        
+        <div id="photoStatusText" class="text-[10px] text-center text-slate-400 mb-2">Belum ada foto dipilih</div>
+        <img id="photoPreview" class="hidden w-full h-32 object-cover rounded-lg mb-2.5 border border-slate-700">
         
         <div class="grid grid-cols-2 gap-2">
-            <button onclick="closeModal('addModal')" class="btn py-3">Batal</button>
-            <button onclick="addEntryBox()" class="bg-blue-600 hover:bg-blue-700 rounded-xl py-3 font-bold text-white">Simpan</button>
+            <button onclick="closeModal('addModal')" class="btn py-2 text-[11px]">Batal</button>
+            <button onclick="addEntryBox()" class="bg-blue-600 hover:bg-blue-700 rounded-lg py-2 text-[11px] font-bold text-white">Simpan</button>
         </div>
     </div>
 </div>
 
-<!-- MODAL LIVE CAMERA -->
-<div id="cameraModal" class="fixed inset-0 bg-black/95 z-[150] hidden flex-col items-center justify-between p-4">
-    <div class="w-full max-w-md flex justify-between items-center text-white pb-2">
-        <h3 class="font-bold text-lg"><i class="fas fa-camera cyan"></i> Ambil Foto Box</h3>
-        <button onclick="stopLiveCamera()" class="btn w-10 h-10 flex items-center justify-center text-xl text-red-400"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="relative w-full max-w-md flex-1 bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-slate-800">
-        <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
-        <canvas id="cameraCanvas" class="hidden"></canvas>
-    </div>
-    <div class="w-full max-w-md pt-4 flex items-center justify-around">
-        <button onclick="switchCamera()" class="btn w-14 h-14 rounded-full text-xl text-slate-300" title="Ganti Kamera"><i class="fas fa-rotate"></i></button>
-        <button onclick="capturePhoto()" class="w-20 h-20 rounded-full border-4 border-white bg-cyan-500 hover:bg-cyan-400 flex items-center justify-center text-2xl text-black shadow-lg" title="Jepret"><i class="fas fa-camera"></i></button>
-        <button onclick="stopLiveCamera()" class="btn w-14 h-14 rounded-full text-xl text-red-400" title="Tutup"><i class="fas fa-times"></i></button>
-    </div>
+<!-- Modal Preview Gambar -->
+<div id="imageModal" class="fixed inset-0 bg-black/90 z-[120] hidden items-center justify-center p-3" onclick="closeModal('imageModal')">
+    <img id="modalImage" class="max-w-full max-h-[85vh] rounded-xl">
 </div>
 
-<!-- MODAL LIHAT GAMBAR -->
-<div id="imageModal" class="fixed inset-0 bg-black/90 z-[120] hidden items-center justify-center p-4" onclick="closeModal('imageModal')">
-    <img id="modalImage" class="max-w-full max-h-[90vh] rounded-xl">
-</div>
-
-<!-- MODAL LOGIN / KODE TOKO -->
-<div id="loginModal" class="fixed inset-0 bg-[#020b14] z-[200] hidden items-center justify-center p-5">
-    <div class="glass rounded-3xl p-7 w-full max-w-sm text-center">
-        <div class="text-6xl mb-3">🐟</div>
-        <h2 class="text-2xl font-extrabold mb-1">STORE IKAN</h2>
-        <p class="text-slate-400 mb-5">Masukkan kode toko untuk terhubung</p>
-        <input id="loginRoomCode" maxlength="30" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-4 text-center text-xl font-bold uppercase text-white outline-none mb-3" placeholder="Contoh: 888">
-        <button type="button" onclick="joinRoom()" class="w-full bg-green-600 hover:bg-green-700 active:scale-95 transition-all rounded-xl p-4 font-bold text-white text-lg shadow-lg">Mulai / Masuk</button>
-        <p id="loginError" class="text-red-400 text-sm mt-3 hidden"></p>
+<!-- Modal Login Toko -->
+<div id="loginModal" class="fixed inset-0 bg-[#020b14] z-[200] hidden items-center justify-center p-4">
+    <div class="glass rounded-2xl p-6 w-full max-w-sm text-center">
+        <div class="text-4xl mb-2">🐟</div>
+        <h2 class="text-lg font-extrabold mb-1 text-white">STORE IKAN</h2>
+        <p class="text-slate-400 text-[11px] mb-4">Masukkan kode toko untuk terhubung</p>
+        <input id="loginRoomCode" maxlength="30" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 text-center text-base font-bold uppercase text-white outline-none mb-3" placeholder="Contoh: AC001">
+        <button type="button" onclick="joinRoom()" class="w-full bg-green-600 hover:bg-green-700 active:scale-95 transition-all rounded-xl p-3 font-bold text-white text-xs shadow-lg">Mulai / Masuk</button>
+        <p id="loginError" class="text-red-400 text-[11px] mt-2.5 hidden"></p>
     </div>
 </div>
 
@@ -287,12 +262,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-database-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyDWs5wLuhewr-5LqhM882x98qG8DrIvpgc",authDomain:"acai-cf0b8.firebaseapp.com",databaseURL:"https://acai-cf0b8-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"acai-cf0b8",storageBucket:"acai-cf0b8.firebasestorage.app",messagingSenderId:"735224898858",appId:"1:735224898858:web:5b597c7e19c86ee9162a53",measurementId:"G-YD77RP6BPE"};
-let db=null, currentRoom=null, currentData={stock:{},history:[]}, currentBase64Image="", photoTarget=null, isInitialLoad=true;
-let cameraStream=null, currentFacingMode="environment";
+let db=null, currentRoom=null, currentData={stock:{},history:[]}, currentBase64Image="", photoTarget=null;
+let activeOutBoxId=null;
+
 const deviceId = localStorage.getItem("fishStoreDeviceId") || ("device_" + Date.now() + "_" + Math.random().toString(36).slice(2,10));
 localStorage.setItem("fishStoreDeviceId", deviceId);
 let pendingLocalWriteSignature = null;
-let notificationReady = false;
 
 try {
     firebase.initializeApp(firebaseConfig);
@@ -303,7 +278,7 @@ try {
 
 const $ = id => document.getElementById(id);
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-xl sm:text-3xl w-7 sm:w-8 text-center":"red text-xl sm:text-3xl w-7 sm:w-8 text-center"}
+function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-lg w-6 text-center":"red text-lg w-6 text-center"}
 function roomPath(){return "rooms/" + currentRoom;}
 
 function openModal(id){
@@ -322,7 +297,7 @@ function switchPage(pageId){
     ['navStock', 'navSummary', 'navHistory', 'navCode'].forEach(btnId => {
         const b = $(btnId);
         if(b) {
-            b.className = "py-3 text-slate-300";
+            b.className = "py-2 text-slate-400";
             b.querySelector("i").className = b.querySelector("i").className.replace(" green", "");
         }
     });
@@ -335,72 +310,11 @@ function switchPage(pageId){
     
     if(activeBtnId) {
         const ab = $(activeBtnId);
-        if(ab) {
-            ab.className = "py-3 green";
-        }
+        if(ab) { ab.className = "py-2 green"; }
     }
     window.scrollTo({top:0, behavior:'smooth'});
 }
 
-async function registerServiceWorker(){
-    if(!("serviceWorker" in navigator)) return null;
-    try{
-        const reg = await navigator.serviceWorker.register("./store-ikan-sw.js", {scope:"./"});
-        await navigator.serviceWorker.ready;
-        notificationReady = true;
-        return reg;
-    }catch(e){
-        console.error("Service Worker registration error:", e);
-        return null;
-    }
-}
-
-async function requestNotifPermission(){
-    if(!("Notification" in window)){
-        alert("Browser ini tidak mendukung notifikasi sistem.");
-        return;
-    }
-    if(!window.isSecureContext){
-        alert("Notifikasi membutuhkan situs HTTPS. Buka aplikasi melalui alamat https://...");
-        return;
-    }
-    try{
-        const permission = await Notification.requestPermission();
-        if(permission==="granted"){
-            $("notifBtn").classList.replace("text-yellow-400","text-green-400");
-            await registerServiceWorker();
-            sendNotification("Notifikasi Aktif","Anda akan menerima perubahan stok dari perangkat lain.");
-        }else if(permission==="denied"){
-            alert("Izin notifikasi ditolak. Izinkan notifikasi untuk situs ini melalui pengaturan browser.");
-        }
-    }catch(err){
-        console.error("Notification permission error:", err);
-        alert("Tidak dapat mengaktifkan notifikasi.");
-    }
-}
-
-async function sendNotification(title, body){
-    if(!("Notification" in window) || Notification.permission!=="granted") return;
-    try{
-        const reg = await registerServiceWorker();
-        if(reg && reg.showNotification){
-            await reg.showNotification(title,{
-                body,
-                icon:"https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
-                badge:"https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
-                tag:"store-ikan-update",
-                renotify:true,
-                data:{url:location.href}
-            });
-        }else{
-            new Notification(title,{body});
-        }
-    }catch(e){
-        console.error("Notification error:",e);
-    }
-}
-
-// LOGIN / MASUK KODE TOKO
 function joinRoom(){
     const inputEl = $("loginRoomCode");
     let code = inputEl ? inputEl.value.trim().toUpperCase() : "";
@@ -411,8 +325,6 @@ function joinRoom(){
         if(errEl) {
             errEl.textContent = "Silakan ketik kode toko terlebih dahulu!";
             errEl.classList.remove("hidden");
-        } else {
-            alert("Silakan ketik kode toko terlebih dahulu!");
         }
         return;
     }
@@ -423,8 +335,6 @@ function joinRoom(){
     if($("roomDisplay")) $("roomDisplay").textContent = code;
     
     closeModal("loginModal");
-    
-    isInitialLoad = true;
     subscribe();
 }
 
@@ -436,33 +346,12 @@ function saveRoomCode(){
     localStorage.setItem("fishStoreRoomCode", c);
     if($("loginRoomCode")) $("loginRoomCode").value = c;
     $("roomDisplay").textContent = c;
-    isInitialLoad = true;
     subscribe();
     alert("Kode toko tersambung: " + c);
 }
 
 function dataSignature(data){
     try { return JSON.stringify(data); } catch(e) { return ""; }
-}
-
-function latestHistoryItem(data){
-    const h = data?.history;
-    return Array.isArray(h) && h.length ? h[h.length-1] : null;
-}
-
-function describeRemoteChange(newData){
-    const latest = latestHistoryItem(newData);
-    if(latest && latest.deviceId && latest.deviceId !== deviceId){
-        return {
-            title:"Perubahan Stok",
-            body:(latest.desc || "Ada perubahan pada stok.") +
-                 (latest.quantity ? " (" + Number(latest.quantity).toFixed(3) + " Kg)" : "")
-        };
-    }
-    return {
-        title:"Stok Diperbarui",
-        body:"Data stok toko telah berubah dari perangkat lain."
-    };
 }
 
 function subscribe(){
@@ -480,339 +369,8 @@ function subscribe(){
         const signature = dataSignature(newData);
         const isLocalEcho = pendingLocalWriteSignature && pendingLocalWriteSignature === signature;
 
-        if(!isInitialLoad && !isLocalEcho && dataSignature(currentData) !== signature){
-            const note = describeRemoteChange(newData);
-            sendNotification(note.title, note.body);
-        }
-
         if(isLocalEcho) pendingLocalWriteSignature = null;
 
         currentData = newData;
-        isInitialLoad = false;
         refreshUI();
-        setStatus("Realtime", true);
-    }, e => {
-        console.error(e);
-        setStatus("Offline/Gagal", false);
-    });
-}
-
-function saveData(){
-    if(!db || !currentRoom) return alert("Belum terhubung ke kode toko.");
-    pendingLocalWriteSignature = dataSignature(currentData);
-    db.ref(roomPath()).set(currentData).catch(e => {
-        pendingLocalWriteSignature = null;
-        setStatus("Gagal menyimpan", false);
-        alert("Gagal menyimpan data: " + e.message);
-    });
-}
-
-function makeLog(desc,type,box,qty){
-    currentData.history.push({desc,type,boxNumber:box,quantity:Number(qty)||0,timestamp:new Date().toISOString(),deviceId});
-    if(currentData.history.length > 1000) currentData.history = currentData.history.slice(-1000);
-}
-
-function formatDateTime(x){
-    const d = new Date(x);
-    return isNaN(d) ? "-" : d.toLocaleString("id-ID",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
-}
-
-function compressImage(u,cb){
-    const i = new Image();
-    i.onload = () => {
-        const m = 900, s = Math.min(1, m/Math.max(i.width,i.height)), c = document.createElement("canvas");
-        c.width = Math.max(1, i.width*s);
-        c.height = Math.max(1, i.height*s);
-        c.getContext("2d").drawImage(i,0,0,c.width,c.height);
-        cb(c.toDataURL("image/jpeg", .75));
-    };
-    i.onerror = () => cb(u);
-    i.src = u;
-}
-
-// --- FITUR KAMERA LANGSUNG ---
-async function startLiveCamera(targetId=null){
-    photoTarget = targetId;
-
-    if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        alert("Kamera membutuhkan HTTPS. Buka aplikasi melalui alamat https://...");
-        photoTarget = null;
-        return;
-    }
-
-    if(cameraStream) stopCameraTracks();
-
-    try{
-        let stream;
-        try{
-            stream = await navigator.mediaDevices.getUserMedia({
-                video:{
-                    facingMode:{ideal:currentFacingMode},
-                    width:{ideal:1280},
-                    height:{ideal:720}
-                },
-                audio:false
-            });
-        }catch(firstErr){
-            stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-        }
-
-        cameraStream = stream;
-        const video = $("cameraVideo");
-        video.srcObject = stream;
-        video.setAttribute("playsinline","true");
-        openModal("cameraModal");
-        await video.play().catch(()=>{});
-    }catch(err){
-        console.error("Camera access error:",err);
-        photoTarget = null;
-        let msg = "Tidak dapat membuka kamera.";
-        if(err.name === "NotAllowedError" || err.name === "SecurityError") msg = "Izin kamera ditolak. Izinkan kamera untuk situs ini di pengaturan browser.";
-        else if(err.name === "NotFoundError") msg = "Kamera tidak ditemukan pada perangkat.";
-        else if(err.name === "NotReadableError") msg = "Kamera sedang digunakan aplikasi lain.";
-        alert(msg);
-        stopCameraTracks();
-        closeModal("cameraModal");
-    }
-}
-
-function switchCamera(){
-    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
-    startLiveCamera(photoTarget);
-}
-
-function stopCameraTracks(){
-    if(cameraStream){
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
-    }
-}
-
-function stopLiveCamera(){
-    stopCameraTracks();
-    closeModal("cameraModal");
-}
-
-function capturePhoto(){
-    const video = $("cameraVideo");
-    const canvas = $("cameraCanvas");
-    if(!video || !video.videoWidth) return alert("Kamera belum siap.");
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-    
-    stopLiveCamera();
-
-    compressImage(dataUrl, p => {
-        if(photoTarget){
-            const x = currentData.stock?.[photoTarget];
-            if(x){
-                x.image = p;
-                makeLog("Update foto Box " + x.boxNumber, "FOTO", x.boxNumber, 0);
-                saveData();
-            }
-            photoTarget = null;
-        } else {
-            currentBase64Image = p;
-            $("photoPreview").src = p;
-            $("photoPreview").classList.remove("hidden");
-            $("photoStatusText").textContent = "Foto berhasil diambil dari kamera";
-        }
-    });
-}
-
-function addEntryBox(){
-    const b = $("newBoxNumber").value.trim().toUpperCase(), kg = parseFloat($("newWeightIn").value);
-    if(!currentRoom) return alert("Masuk ke kode toko terlebih dahulu.");
-    if(!b || !Number.isFinite(kg) || kg <= 0) return alert("Isi Nomor Box dan Berat Masuk dengan benar.");
-    
-    const id = "box_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
-    const finish = p => {
-        if(!currentData.stock) currentData.stock = {};
-        currentData.stock[id] = { boxNumber:b, weightIn:kg, weightOut:0, isCut:false, image:p||"", addedAt:new Date().toISOString() };
-        makeLog("Tambah Box " + b + " (+" + kg.toFixed(3) + " Kg)", "MASUK", b, kg);
-        saveData();
-        resetAdd();
-        closeModal("addModal");
-    };
-    currentBase64Image ? compressImage(currentBase64Image, finish) : finish("");
-}
-
-function resetAdd(){
-    $("newBoxNumber").value = "";
-    $("newWeightIn").value = "";
-    $("newPhotoInput").value = "";
-    $("photoPreview").classList.add("hidden");
-    $("photoPreview").src = "";
-    $("photoStatusText").textContent = "Belum ada foto dipilih";
-    currentBase64Image = "";
-}
-
-function toggleCut(id, c){
-    const x = currentData.stock?.[id];
-    if(!x) return;
-    x.isCut = !!c;
-    makeLog((c ? "CUT " : "Batal CUT ") + x.boxNumber, c ? "CUT" : "BATAL", x.boxNumber, x.weightIn);
-    saveData();
-}
-
-function toggleOut(id, c){
-    const x = currentData.stock?.[id];
-    if(!x) return;
-    x.weightOut = c ? Number(x.weightIn) : 0;
-    makeLog((c ? "OUT " : "Batal OUT ") + x.boxNumber, c ? "OUT" : "BATAL", x.boxNumber, c ? x.weightIn : 0);
-    saveData();
-}
-
-function deleteEntry(id){
-    const x = currentData.stock?.[id];
-    if(!x || !confirm("Hapus data Box " + x.boxNumber + "?")) return;
-    makeLog("Hapus Box " + x.boxNumber, "HAPUS", x.boxNumber, x.weightIn);
-    delete currentData.stock[id];
-    saveData();
-}
-
-function refreshUI(){
-    let ti=0, to=0, count=0;
-    let cutCount=0, cutKg=0;
-    let cutNotOutCount=0, cutNotOutKg=0;
-    let uncutCount=0, uncutKg=0;
-
-    const list = $("stockList"), q = $("searchInput").value.trim().toLowerCase();
-    list.innerHTML = "";
-    
-    Object.entries(currentData.stock||{}).forEach(([id,x]) => {
-        if(!x || !x.boxNumber) return;
-        count++;
-        const inKg = +x.weightIn || 0;
-        const outKg = +x.weightOut || 0;
-        const remKg = Math.max(0, inKg - outKg);
-
-        ti += inKg;
-        to += outKg;
-
-        if(x.isCut){
-            cutCount++;
-            cutKg += inKg;
-            if(outKg <= 0 && remKg > 0){
-                cutNotOutCount++;
-                cutNotOutKg += remKg;
-            }
-        } else {
-            uncutCount++;
-            uncutKg += remKg;
-        }
-
-        if(q && !x.boxNumber.toLowerCase().includes(q)) return;
-
-        const d = document.createElement("div");
-        d.className = "glass rounded-2xl p-3 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center";
-        const p = x.image ? `<img src="${x.image}" onclick="showImage('${encodeURIComponent(x.image)}')" class="fish-photo rounded-xl cursor-pointer">` : `<div class="fish-photo rounded-xl bg-[#07121d] flex items-center justify-center text-slate-600 text-3xl"><i class="fas fa-image"></i></div>`;
-        d.innerHTML = `<div class="shrink-0 flex justify-center sm:block">${p}</div><div class="flex-1 min-w-0"><div class="text-xl font-bold">${esc(x.boxNumber)}</div><div class="text-slate-300 mt-1">Stok: <b class="yellow text-lg">${remKg.toFixed(3)}</b> Kg</div><div class="flex gap-2 mt-2 flex-wrap"><span class="bg-blue-950/60 border border-blue-800 rounded-lg px-2 py-1 text-xs blue">Masuk: ${inKg.toFixed(3)} Kg</span><span class="bg-red-950/60 border border-red-800 rounded-lg px-2 py-1 text-xs red">Keluar: ${outKg.toFixed(3)} Kg</span></div></div><div class="fish-actions grid grid-cols-2 sm:flex sm:flex-col gap-2"><button onclick="toggleCut('${id}',${!x.isCut})" class="rounded-lg py-2.5 px-4 border border-green-600 font-bold green">⬇ ${x.isCut?"CUT ✓":"CUT"}</button><button onclick="toggleOut('${id}',${outKg<=0})" class="rounded-lg py-2.5 px-4 border border-red-600 font-bold red">⬆ ${outKg>0?"OUT ✓":"OUT"}</button><button onclick="startLiveCamera('${id}')" title="Ambil Foto Kamera" class="rounded-lg py-2.5 px-4 border border-cyan-500 cyan"><i class="fas fa-camera"></i></button><button onclick="deleteEntry('${id}')" class="rounded-lg py-2.5 px-4 border border-slate-700 text-slate-400"><i class="fas fa-trash"></i></button></div>`;
-        list.appendChild(d);
-    });
-
-    $("emptyStock").classList.toggle("hidden", count !== 0);
-    $("totalBox").textContent = count;
-    $("totalIn").textContent = ti.toFixed(3);
-    $("totalOut").textContent = to.toFixed(3);
-    $("stokKg").textContent = Math.max(0, ti-to).toFixed(3);
-
-    $("totalCutBox").textContent = cutCount;
-    $("totalCutKg").textContent = cutKg.toFixed(3);
-
-    $("totalCutNotOutBox").textContent = cutNotOutCount;
-    $("totalCutNotOutKg").textContent = cutNotOutKg.toFixed(3);
-
-    $("totalUncutBox").textContent = uncutCount;
-    $("totalUncutKg").textContent = uncutKg.toFixed(3);
-
-    renderHistory();
-}
-
-// File Picker fallback
-$("newPhotoInput").addEventListener("change", e => {
-    const f = e.target.files?.[0];
-    if(!f) return;
-    const r = new FileReader();
-    r.onload = v => {
-        currentBase64Image = v.target.result;
-        $("photoPreview").src = currentBase64Image;
-        $("photoPreview").classList.remove("hidden");
-        $("photoStatusText").textContent = "Foto berhasil dipilih dari file";
-    };
-    r.readAsDataURL(f);
-});
-
-function renderHistory(){
-    const list = $("historyList"), f = $("historyDate").value;
-    list.innerHTML = "";
-    const a = (currentData.history||[]).filter(x => !f || String(x.timestamp).slice(0,10) === f).slice().reverse();
-    $("emptyHistory").classList.toggle("hidden", a.length !== 0);
-    a.forEach(x => {
-        const d = document.createElement("div");
-        d.className = "history-row grid grid-cols-5 gap-2 px-3 py-3 border-t border-[#1b2d3d] text-xs sm:text-sm";
-        d.innerHTML = `<div class="text-slate-300">${esc(formatDateTime(x.timestamp))}</div><div class="font-semibold">${esc(x.boxNumber||"-")}</div><div><span class="px-2 py-1 rounded-md ${x.type==='OUT'?'bg-red-900/50 red':'bg-green-900/50 green'} border border-current">${esc(x.type||'INFO')}</span></div><div>${(+x.quantity||0).toFixed(3)} Kg</div><div class="text-slate-400">${esc(x.desc||"")}</div>`;
-        list.appendChild(d);
-    });
-}
-
-function clearHistory(){
-    if(!confirm("Hapus semua histori transaksi?")) return;
-    currentData.history = [];
-    saveData();
-}
-
-function showImage(e){ $("modalImage").src = decodeURIComponent(e); openModal("imageModal"); }
-function showAbout(){ alert("STORE IKAN\nCatatan Stok Realtime\nData tersimpan aman melalui Firebase."); }
-function shareCode(){
-    if(!currentRoom) return;
-    const t = "Gunakan kode toko: " + currentRoom;
-    if(navigator.share) navigator.share({title:"STORE IKAN", text:t, url:location.href}).catch(()=>{});
-    else if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>alert("Kode toko disalin: " + currentRoom));
-    else alert(t);
-}
-function toggleMenu(){ alert("STORE IKAN\nGunakan menu navigasi di bagian bawah layar."); }
-
-// Scroll event listener untuk menyembunyikan/mengecilkan header saat digeser ke bawah
-let lastScrollTop = 0;
-window.addEventListener("scroll", () => {
-    let currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-    const header = $("mainHeader");
-    if(currentScroll > lastScrollTop && currentScroll > 40){
-        header.classList.add("shrink");
-    } else {
-        header.classList.remove("shrink");
-    }
-    lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
-}, false);
-
-$("historyDate").addEventListener("change", renderHistory);
-$("searchInput").addEventListener("input", refreshUI);
-$("loginRoomCode").addEventListener("keydown", e => { if(e.key === 'Enter') joinRoom(); });
-
-window.addEventListener("load", () => {
-    if("Notification" in window && Notification.permission === "granted"){
-        $("notifBtn").classList.replace("text-yellow-400", "text-green-400");
-    }
-    const s = localStorage.getItem("fishStoreRoomCode");
-    if(s){
-        $("loginRoomCode").value = s;
-        joinRoom();
-    } else {
-        openModal("loginModal");
-    }
-});
-
-window.addEventListener("online", () => { $("deviceText").textContent = "Online"; setStatus("Realtime", true); });
-window.addEventListener("offline", () => { $("deviceText").textContent = "Offline"; setStatus("Internet terputus", false); });
-window.addEventListener("pagehide", stopCameraTracks);
-document.addEventListener("visibilitychange", () => {
-    if(document.hidden) stopCameraTracks();
-});
-</script>
-</body>
-</html>
+        setStatus("Realtime
