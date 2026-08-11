@@ -15,6 +15,7 @@
         .blue{color:#3f9cff}
         .red{color:#ff4545}
         .yellow{color:#ffd52e}
+        .cyan{color:#00f2fe}
         .btn{border:1px solid #2d4960;background:#0b1723;color:#eaf2f8;border-radius:10px}
         .table-scroll{overflow-x:auto}
         .history-row{min-width:760px}
@@ -35,7 +36,10 @@
             <h1 class="top-title text-3xl font-extrabold tracking-wide">🐟 STORE IKAN 🐟</h1>
             <p class="green text-sm sm:text-base">Catatan Stok Realtime</p>
         </div>
-        <div id="wifiIcon" class="green text-3xl w-12 text-center"><i class="fas fa-wifi"></i></div>
+        <div class="flex items-center gap-2">
+            <button id="notifBtn" onclick="requestNotifPermission()" class="btn w-10 h-10 text-sm flex items-center justify-center text-yellow-400" title="Aktifkan Notifikasi"><i class="fas fa-bell"></i></button>
+            <div id="wifiIcon" class="green text-2xl sm:text-3xl w-8 text-center"><i class="fas fa-wifi"></i></div>
+        </div>
     </header>
 
     <section class="summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
@@ -81,7 +85,7 @@
         </div>
 
         <div class="glass rounded-2xl p-4">
-            <p class="text-sm text-slate-300">Sudah CUT</p>
+            <p class="text-sm text-slate-300">Sudah CUT (Total)</p>
             <div class="flex items-center gap-3 mt-2">
                 <div class="w-11 h-11 rounded-xl bg-green-900/60 flex items-center justify-center text-green-300 text-xl"><i class="fas fa-scissors"></i></div>
                 <div>
@@ -90,6 +94,19 @@
                 </div>
             </div>
         </div>
+
+        <!-- FITUR BARU: SUDAH CUT BELUM OUT -->
+        <div class="glass rounded-2xl p-4 border border-cyan-500/30">
+            <p class="text-sm text-cyan-300 font-semibold">CUT Belum OUT</p>
+            <div class="flex items-center gap-3 mt-2">
+                <div class="w-11 h-11 rounded-xl bg-cyan-900/60 flex items-center justify-center text-cyan-300 text-xl"><i class="fas fa-box-archive"></i></div>
+                <div>
+                    <div id="totalCutNotOutBox" class="text-3xl font-bold cyan">0</div>
+                    <div class="text-xs cyan"><span id="totalCutNotOutKg">0.000</span> Kg</div>
+                </div>
+            </div>
+        </div>
+
         <div class="glass rounded-2xl p-4">
             <p class="text-sm text-slate-300">Belum CUT</p>
             <div class="flex items-center gap-3 mt-2">
@@ -168,32 +185,59 @@
     </nav>
 </div>
 
+<!-- MODAL TAMBAH BOX -->
 <div id="addModal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4">
     <div class="glass rounded-2xl p-5 w-full max-w-md">
         <h3 class="text-xl font-bold mb-4">Tambah Entry Box</h3>
-        <input id="newBoxNumber" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 mb-3" placeholder="Nomor Box (contoh B1)">
-        <input id="newWeightIn" type="number" min="0.001" step="0.001" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 mb-3" placeholder="Berat Masuk (Kg)">
-        <input id="newPhotoInput" type="file" accept="image/*" capture="environment" class="hidden">
-        <button onclick="document.getElementById('newPhotoInput').click()" class="btn w-full p-3 mb-2"><i class="fas fa-camera blue"></i> <span id="photoStatus">Ambil Foto / Galeri</span></button>
-        <img id="photoPreview" class="hidden w-full h-40 object-cover rounded-xl mb-3">
+        <input id="newBoxNumber" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 mb-3 text-white outline-none" placeholder="Nomor Box (contoh B1)">
+        <input id="newWeightIn" type="number" min="0.001" step="0.001" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-3 mb-3 text-white outline-none" placeholder="Berat Masuk (Kg)">
+        
+        <div class="grid grid-cols-2 gap-2 mb-3">
+            <button onclick="startLiveCamera(null)" class="btn p-3 cyan flex items-center justify-center gap-2"><i class="fas fa-video"></i> Buka Kamera</button>
+            <button onclick="document.getElementById('newPhotoInput').click()" class="btn p-3 blue flex items-center justify-center gap-2"><i class="fas fa-image"></i> Dari File</button>
+        </div>
+        <input id="newPhotoInput" type="file" accept="image/*" class="hidden">
+        
+        <div id="photoStatusText" class="text-xs text-center text-slate-400 mb-2">Belum ada foto dipilih</div>
+        <img id="photoPreview" class="hidden w-full h-40 object-cover rounded-xl mb-3 border border-slate-700">
+        
         <div class="grid grid-cols-2 gap-2">
             <button onclick="closeModal('addModal')" class="btn py-3">Batal</button>
-            <button onclick="addEntryBox()" class="bg-blue-600 rounded-xl py-3 font-bold">Simpan</button>
+            <button onclick="addEntryBox()" class="bg-blue-600 hover:bg-blue-700 rounded-xl py-3 font-bold text-white">Simpan</button>
         </div>
     </div>
 </div>
 
+<!-- MODAL LIVE CAMERA -->
+<div id="cameraModal" class="fixed inset-0 bg-black/95 z-[150] hidden flex-col items-center justify-between p-4">
+    <div class="w-full max-w-md flex justify-between items-center text-white pb-2">
+        <h3 class="font-bold text-lg"><i class="fas fa-camera cyan"></i> Ambil Foto Box</h3>
+        <button onclick="stopLiveCamera()" class="btn w-10 h-10 flex items-center justify-center text-xl text-red-400"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="relative w-full max-w-md flex-1 bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-slate-800">
+        <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+        <canvas id="cameraCanvas" class="hidden"></canvas>
+    </div>
+    <div class="w-full max-w-md pt-4 flex items-center justify-around">
+        <button onclick="switchCamera()" class="btn w-14 h-14 rounded-full text-xl text-slate-300" title="Ganti Kamera"><i class="fas fa-rotate"></i></button>
+        <button onclick="capturePhoto()" class="w-20 h-20 rounded-full border-4 border-white bg-cyan-500 hover:bg-cyan-400 flex items-center justify-center text-2xl text-black shadow-lg" title="Jepret"><i class="fas fa-camera"></i></button>
+        <button onclick="stopLiveCamera()" class="btn w-14 h-14 rounded-full text-xl text-red-400" title="Tutup"><i class="fas fa-times"></i></button>
+    </div>
+</div>
+
+<!-- MODAL LIHAT GAMBAR -->
 <div id="imageModal" class="fixed inset-0 bg-black/90 z-[120] hidden items-center justify-center p-4" onclick="closeModal('imageModal')">
     <img id="modalImage" class="max-w-full max-h-[90vh] rounded-xl">
 </div>
 
+<!-- MODAL LOGIN / KODE TOKO -->
 <div id="loginModal" class="fixed inset-0 bg-[#020b14] z-[200] flex items-center justify-center p-5">
     <div class="glass rounded-3xl p-7 w-full max-w-sm text-center">
         <div class="text-6xl mb-3">🐟</div>
         <h2 class="text-2xl font-extrabold mb-1">STORE IKAN</h2>
         <p class="text-slate-400 mb-5">Masukkan kode toko untuk terhubung</p>
-        <input id="loginRoomCode" maxlength="30" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-4 text-center text-xl font-bold uppercase" placeholder="AC001">
-        <button onclick="joinRoom()" class="w-full bg-green-600 rounded-xl p-4 mt-3 font-bold">Mulai / Masuk</button>
+        <input id="loginRoomCode" maxlength="30" class="w-full bg-[#06111c] border border-[#294258] rounded-xl p-4 text-center text-xl font-bold uppercase text-white outline-none" placeholder="AC001">
+        <button onclick="joinRoom()" class="w-full bg-green-600 hover:bg-green-700 rounded-xl p-4 mt-3 font-bold text-white">Mulai / Masuk</button>
         <p id="loginError" class="text-red-400 text-sm mt-3 hidden"></p>
     </div>
 </div>
@@ -202,7 +246,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-database-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyDWs5wLuhewr-5LqhM882x98qG8DrIvpgc",authDomain:"acai-cf0b8.firebaseapp.com",databaseURL:"https://acai-cf0b8-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"acai-cf0b8",storageBucket:"acai-cf0b8.firebasestorage.app",messagingSenderId:"735224898858",appId:"1:735224898858:web:5b597c7e19c86ee9162a53",measurementId:"G-YD77RP6BPE"};
-let db=null,currentRoom=null,currentData={stock:{},history:[]},currentBase64Image="",photoTarget=null;
+let db=null,currentRoom=null,currentData={stock:{},history:[]},currentBase64Image="",photoTarget=null,isInitialLoad=true;
+let cameraStream=null, currentFacingMode="environment";
 
 try{
     firebase.initializeApp(firebaseConfig);
@@ -213,9 +258,37 @@ try{
 
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-3xl w-12 text-center":"red text-3xl w-12 text-center"}
+function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-2xl sm:text-3xl w-8 text-center":"red text-2xl sm:text-3xl w-8 text-center"}
 function roomPath(){return "rooms/"+currentRoom}
 function showLoginError(m){$("loginError").textContent=m;$("loginError").classList.remove("hidden")}
+
+function requestNotifPermission(){
+    if(!("Notification" in window)){
+        alert("Browser ini tidak mendukung notifikasi sistem.");
+        return;
+    }
+    Notification.requestPermission().then(permission=>{
+        if(permission==="granted"){
+            $("notifBtn").classList.replace("text-yellow-400","text-green-400");
+            sendNotification("Notifikasi Aktif","Anda akan menerima update transaksi stok.");
+        }
+    });
+}
+
+function sendNotification(title, body){
+    if("Notification" in window && Notification.permission==="granted"){
+        try {
+            new Notification(title, {
+                body: body,
+                icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png"
+            });
+        } catch(e) {
+            if(navigator.serviceWorker && navigator.serviceWorker.ready){
+                navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,{body, icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png"}));
+            }
+        }
+    }
+}
 
 function joinRoom(){
     const inputEl = $("loginRoomCode");
@@ -227,6 +300,7 @@ function joinRoom(){
     localStorage.setItem("fishStoreRoomCode", code);
     $("roomCodeInput2").value = code;
     $("roomDisplay").textContent = code;
+    isInitialLoad = true;
     subscribe();
 }
 
@@ -237,6 +311,7 @@ function saveRoomCode(){
     localStorage.setItem("fishStoreRoomCode",c);
     $("loginRoomCode").value=c;
     $("roomDisplay").textContent=c;
+    isInitialLoad = true;
     subscribe();
 }
 
@@ -245,9 +320,19 @@ function subscribe(){
     setStatus("Menghubungkan...",false);
     db.ref(roomPath()).off();
     db.ref(roomPath()).on("value",s=>{
-        currentData=s.val()||{};
-        currentData.stock=currentData.stock||{};
-        currentData.history=Array.isArray(currentData.history)?currentData.history:[];
+        const newData=s.val()||{};
+        newData.stock=newData.stock||{};
+        newData.history=Array.isArray(newData.history)?newData.history:[];
+        
+        if(!isInitialLoad && newData.history.length > (currentData.history||[]).length){
+            const latest = newData.history[newData.history.length - 1];
+            if(latest){
+                sendNotification("Update Stok: " + latest.type, `${latest.desc} (${latest.quantity} Kg)`);
+            }
+        }
+        
+        currentData = newData;
+        isInitialLoad = false;
         $("loginModal").style.display="none";
         refreshUI();
         setStatus("Realtime",true);
@@ -284,136 +369,4 @@ function compressImage(u,cb){
         c.width=Math.max(1,i.width*s);
         c.height=Math.max(1,i.height*s);
         c.getContext("2d").drawImage(i,0,0,c.width,c.height);
-        cb(c.toDataURL("image/jpeg",.72));
-    };
-    i.onerror=()=>cb(u);
-    i.src=u;
-}
-
-function addEntryBox(){
-    const b=$("newBoxNumber").value.trim().toUpperCase(),kg=parseFloat($("newWeightIn").value);
-    if(!currentRoom) return alert("Masuk ke kode toko terlebih dahulu.");
-    if(!b||!Number.isFinite(kg)||kg<=0) return alert("Isi Nomor Box dan Berat Masuk dengan benar.");
-    
-    const id="box_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
-    const finish=p=>{
-        currentData.stock[id]={boxNumber:b,weightIn:kg,weightOut:0,isCut:false,image:p||"",addedAt:new Date().toISOString()};
-        makeLog("Tambah Box "+b+" (+"+kg.toFixed(3)+" Kg)","MASUK",b,kg);
-        saveData();
-        resetAdd();
-        closeModal("addModal");
-    };
-    currentBase64Image?compressImage(currentBase64Image,finish):finish("");
-}
-
-function resetAdd(){
-    $("newBoxNumber").value="";
-    $("newWeightIn").value="";
-    $("newPhotoInput").value="";
-    $("photoPreview").classList.add("hidden");
-    $("photoStatus").textContent="Ambil Foto / Galeri";
-    currentBase64Image="";
-}
-
-function toggleCut(id,c){
-    const x=currentData.stock?.[id];
-    if(!x)return;
-    x.isCut=!!c;
-    makeLog((c?"CUT ":"Batal CUT ")+x.boxNumber,c?"CUT":"BATAL",x.boxNumber,x.weightIn);
-    saveData();
-}
-
-function toggleOut(id,c){
-    const x=currentData.stock?.[id];
-    if(!x)return;
-    x.weightOut=c?Number(x.weightIn):0;
-    makeLog((c?"OUT ":"Batal OUT ")+x.boxNumber,c?"OUT":"BATAL",x.boxNumber,c?x.weightIn:0);
-    saveData();
-}
-
-function deleteEntry(id){
-    const x=currentData.stock?.[id];
-    if(!x||!confirm("Hapus data Box "+x.boxNumber+"?"))return;
-    makeLog("Hapus Box "+x.boxNumber,"HAPUS",x.boxNumber,x.weightIn);
-    delete currentData.stock[id];
-    saveData();
-}
-
-function refreshUI(){
-    let ti=0, to=0, count=0;
-    let cutCount=0, cutKg=0;
-    let uncutCount=0, uncutKg=0;
-
-    const list=$("stockList"), q=$("searchInput").value.trim().toLowerCase();
-    list.innerHTML="";
-    
-    Object.entries(currentData.stock||{}).forEach(([id,x])=>{
-        if(!x?.boxNumber)return;
-        count++;
-        const inKg = +x.weightIn || 0;
-        const outKg = +x.weightOut || 0;
-        const remKg = Math.max(0, inKg - outKg);
-
-        ti += inKg;
-        to += outKg;
-
-        if(x.isCut){
-            cutCount++;
-            cutKg += remKg;
-        } else {
-            uncutCount++;
-            uncutKg += remKg;
-        }
-
-        if(q && !x.boxNumber.toLowerCase().includes(q)) return;
-
-        const d=document.createElement("div");
-        d.className="glass rounded-2xl p-3 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center";
-        const p=x.image?`<img src="${x.image}" onclick="showImage('${encodeURIComponent(x.image)}')" class="fish-photo w-full sm:w-32 h-28 object-cover rounded-xl cursor-pointer">`:`<div class="fish-photo w-full sm:w-32 h-28 rounded-xl bg-[#07121d] flex items-center justify-center text-slate-600 text-3xl"><i class="fas fa-image"></i></div>`;
-        d.innerHTML=`<div class="sm:w-32 shrink-0">${p}</div><div class="flex-1 min-w-0"><div class="text-lg font-bold">${esc(x.boxNumber)}</div><div class="text-slate-300">Stok: <b class="yellow">${remKg.toFixed(3)}</b> Kg</div><div class="flex gap-2 mt-2 flex-wrap"><span class="bg-blue-950/60 border border-blue-800 rounded-lg px-2 py-1 text-xs blue">Masuk: ${inKg.toFixed(3)} Kg</span><span class="bg-red-950/60 border border-red-800 rounded-lg px-2 py-1 text-xs red">Keluar: ${outKg.toFixed(3)} Kg</span></div></div><div class="fish-actions sm:w-44 grid grid-cols-2 gap-2"><button onclick="toggleCut('${id}',${!x.isCut})" class="rounded-lg py-2 border border-green-600 font-bold green">⬇ ${x.isCut?"CUT ✓":"CUT"}</button><button onclick="toggleOut('${id}',${outKg<=0})" class="rounded-lg py-2 border border-red-600 font-bold red">⬆ ${outKg>0?"OUT ✓":"OUT"}</button><button onclick="choosePhotoFor('${id}')" class="rounded-lg py-2 border border-blue-600 text-blue-300"><i class="fas fa-camera"></i></button><button onclick="deleteEntry('${id}')" class="rounded-lg py-2 border border-slate-700 text-slate-400"><i class="fas fa-trash"></i></button></div>`;
-        list.appendChild(d);
-    });
-
-    $("emptyStock").classList.toggle("hidden",count!==0);
-    $("totalBox").textContent=count;
-    $("totalIn").textContent=ti.toFixed(3);
-    $("totalOut").textContent=to.toFixed(3);
-    $("stokKg").textContent=Math.max(0,ti-to).toFixed(3);
-
-    $("totalCutBox").textContent = cutCount;
-    $("totalCutKg").textContent = cutKg.toFixed(3);
-    $("totalUncutBox").textContent = uncutCount;
-    $("totalUncutKg").textContent = uncutKg.toFixed(3);
-
-    renderHistory();
-}
-
-function choosePhotoFor(id){photoTarget=id;$("newPhotoInput").click()}
-$("newPhotoInput").addEventListener("change",e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=v=>{if(photoTarget){compressImage(v.target.result,p=>{const x=currentData.stock?.[photoTarget];if(x){x.image=p;makeLog("Update foto Box "+x.boxNumber,"FOTO",x.boxNumber,0);saveData()}photoTarget=null})}else{currentBase64Image=v.target.result;$("photoPreview").src=currentBase64Image;$("photoPreview").classList.remove("hidden");$("photoStatus").textContent="Foto berhasil dipilih"}};r.readAsDataURL(f)});
-function renderHistory(){const list=$("historyList"),f=$("historyDate").value;list.innerHTML="";const a=(currentData.history||[]).filter(x=>!f||String(x.timestamp).slice(0,10)===f).slice().reverse();$("emptyHistory").classList.toggle("hidden",a.length!==0);a.forEach(x=>{const d=document.createElement("div");d.className="history-row grid grid-cols-5 gap-2 px-3 py-3 border-t border-[#1b2d3d] text-xs sm:text-sm";d.innerHTML=`<div class="text-slate-300">${esc(formatDateTime(x.timestamp))}</div><div class="font-semibold">${esc(x.boxNumber||"-")}</div><div><span class="px-2 py-1 rounded-md ${x.type==='OUT'?'bg-red-900/50 red':'bg-green-900/50 green'} border border-current">${esc(x.type||'INFO')}</span></div><div>${(+x.quantity||0).toFixed(3)} Kg</div><div class="text-slate-400">${esc(x.desc||"")}</div>`;list.appendChild(d)})}
-function clearHistory(){if(!confirm("Hapus semua histori transaksi?"))return;currentData.history=[];saveData()}
-function showImage(e){$("modalImage").src=decodeURIComponent(e);openModal("imageModal")}
-function openModal(id){$(id).style.display="flex"}
-function closeModal(id){$(id).style.display="none"}
-function goTo(id){$(id).scrollIntoView({behavior:"smooth",block:"start"})}
-function showAbout(){alert("STORE IKAN\nCatatan Stok Realtime\nData tersimpan melalui Firebase Realtime Database.")}
-function shareCode(){if(!currentRoom)return;const t="Gunakan kode toko: "+currentRoom;if(navigator.share)navigator.share({title:"STORE IKAN",text:t,url:location.href}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert("Kode toko disalin: "+currentRoom));else alert(t)}
-function toggleMenu(){alert("STORE IKAN\nGunakan navigasi bawah untuk Stok, Histori, Kode Toko, dan Tentang.")}
-
-$("historyDate").addEventListener("change",renderHistory);
-$("searchInput").addEventListener("input",refreshUI);
-$("loginRoomCode").addEventListener("keydown",e=>{if(e.key==='Enter')joinRoom()});
-window.addEventListener("load",()=>{
-    const s=localStorage.getItem("fishStoreRoomCode");
-    if(s){
-        $("loginRoomCode").value=s;
-        joinRoom();
-    }else{
-        $("loginModal").style.display="flex";
-    }
-});
-window.addEventListener("online",()=>$("deviceText").textContent="Online");
-window.addEventListener("offline",()=>{$("deviceText").textContent="Offline";setStatus("Internet terputus",false)});
-</script>
-</body>
-</html>
+        cb(c.toDataURL("image/jpe
