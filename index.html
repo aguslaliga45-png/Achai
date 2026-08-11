@@ -80,7 +80,6 @@
             </div>
         </div>
 
-        <!-- FITUR BARU: TOTAL SUDAH CUT & BELUM CUT -->
         <div class="glass rounded-2xl p-4">
             <p class="text-sm text-slate-300">Sudah CUT</p>
             <div class="flex items-center gap-3 mt-2">
@@ -204,25 +203,141 @@
 <script>
 const firebaseConfig={apiKey:"AIzaSyDWs5wLuhewr-5LqhM882x98qG8DrIvpgc",authDomain:"acai-cf0b8.firebaseapp.com",databaseURL:"https://acai-cf0b8-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"acai-cf0b8",storageBucket:"acai-cf0b8.firebasestorage.app",messagingSenderId:"735224898858",appId:"1:735224898858:web:5b597c7e19c86ee9162a53",measurementId:"G-YD77RP6BPE"};
 let db=null,currentRoom=null,currentData={stock:{},history:[]},currentBase64Image="",photoTarget=null;
-try{firebase.initializeApp(firebaseConfig);db=firebase.database()}catch(e){console.error(e)}
+
+try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.database();
+}catch(e){
+    console.error("Firebase init error:", e);
+}
 
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-3xl w-12 text-center":"red text-3xl w-12 text-center"}
 function roomPath(){return "rooms/"+currentRoom}
 function showLoginError(m){$("loginError").textContent=m;$("loginError").classList.remove("hidden")}
-function joinRoom(){const code=$("loginRoomCode").value.trim().toUpperCase();if(!code)return showLoginError("Masukkan kode toko terlebih dahulu.");if(!db)return showLoginError("Firebase gagal dimuat.");currentRoom=code;localStorage.setItem("fishStoreRoomCode",code);$("roomCodeInput2").value=code;$("roomDisplay").textContent=code;subscribe()}
-function saveRoomCode(){const c=$("roomCodeInput2").value.trim().toUpperCase();if(!c)return alert("Kode toko tidak boleh kosong.");currentRoom=c;localStorage.setItem("fishStoreRoomCode",c);$("loginRoomCode").value=c;$("roomDisplay").textContent=c;subscribe()}
-function subscribe(){if(!db||!currentRoom)return setStatus("Firebase/Kode toko error",false);setStatus("Menghubungkan...",false);db.ref(roomPath()).off();db.ref(roomPath()).on("value",s=>{currentData=s.val()||{};currentData.stock=currentData.stock||{};currentData.history=Array.isArray(currentData.history)?currentData.history:[];$("loginModal").style.display="none";refreshUI();setStatus("Realtime",true)},e=>{console.error(e);setStatus("Database Error",false);showLoginError("Database: "+(e.code||e.message));$("loginModal").style.display="flex"})}
-function saveData(){if(!db||!currentRoom)return alert("Belum terhubung ke toko.");db.ref(roomPath()).set(currentData).catch(e=>{setStatus("Gagal menyimpan",false);alert("Gagal menyimpan: "+e.message)})}
-function makeLog(desc,type,box,qty){currentData.history.push({desc,type,boxNumber:box,quantity:Number(qty)||0,timestamp:new Date().toISOString()});if(currentData.history.length>1000)currentData.history=currentData.history.slice(-1000)}
-function formatDateTime(x){const d=new Date(x);return isNaN(d)?"-":d.toLocaleString("id-ID",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"})}
-function compressImage(u,cb){const i=new Image();i.onload=()=>{const m=900,s=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.max(1,i.width*s);c.height=Math.max(1,i.height*s);c.getContext("2d").drawImage(i,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.72))};i.onerror=()=>cb(u);i.src=u}
-function addEntryBox(){const b=$("newBoxNumber").value.trim().toUpperCase(),kg=parseFloat($("newWeightIn").value);if(!currentRoom)return alert("Masuk ke kode toko terlebih dahulu.");if(!b||!Number.isFinite(kg)||kg<=0)return alert("Isi Nomor Box dan Berat Masuk dengan benar.");const id="box_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),finish=p=>{currentData.stock[id]={boxNumber:b,weightIn:kg,weightOut:0,isCut:false,image:p||"",addedAt:new Date().toISOString()};makeLog("Tambah Box "+b+" (+"+kg.toFixed(3)+" Kg)","MASUK",b,kg);saveData();resetAdd();closeModal("addModal")};currentBase64Image?compressImage(currentBase64Image,finish):finish("")}
-function resetAdd(){$("newBoxNumber").value="";$("newWeightIn").value="";$("newPhotoInput").value="";$("photoPreview").classList.add("hidden");$("photoStatus").textContent="Ambil Foto / Galeri";currentBase64Image=""}
-function toggleCut(id,c){const x=currentData.stock?.[id];if(!x)return;x.isCut=!!c;makeLog((c?"CUT ":"Batal CUT ")+x.boxNumber,c?"CUT":"BATAL",x.boxNumber,x.weightIn);saveData()}
-function toggleOut(id,c){const x=currentData.stock?.[id];if(!x)return;x.weightOut=c?Number(x.weightIn):0;makeLog((c?"OUT ":"Batal OUT ")+x.boxNumber,c?"OUT":"BATAL",x.boxNumber,c?x.weightIn:0);saveData()}
-function deleteEntry(id){const x=currentData.stock?.[id];if(!x||!confirm("Hapus data Box "+x.boxNumber+"?"))return;makeLog("Hapus Box "+x.boxNumber,"HAPUS",x.boxNumber,x.weightIn);delete currentData.stock[id];saveData()}
+
+function joinRoom(){
+    const inputEl = $("loginRoomCode");
+    const code = inputEl ? inputEl.value.trim().toUpperCase() : "";
+    if(!code) return showLoginError("Masukkan kode toko terlebih dahulu.");
+    if(!db) return showLoginError("Firebase gagal dimuat. Periksa koneksi internet.");
+    
+    currentRoom = code;
+    localStorage.setItem("fishStoreRoomCode", code);
+    $("roomCodeInput2").value = code;
+    $("roomDisplay").textContent = code;
+    subscribe();
+}
+
+function saveRoomCode(){
+    const c=$("roomCodeInput2").value.trim().toUpperCase();
+    if(!c)return alert("Kode toko tidak boleh kosong.");
+    currentRoom=c;
+    localStorage.setItem("fishStoreRoomCode",c);
+    $("loginRoomCode").value=c;
+    $("roomDisplay").textContent=c;
+    subscribe();
+}
+
+function subscribe(){
+    if(!db||!currentRoom) return setStatus("Firebase/Kode toko error",false);
+    setStatus("Menghubungkan...",false);
+    db.ref(roomPath()).off();
+    db.ref(roomPath()).on("value",s=>{
+        currentData=s.val()||{};
+        currentData.stock=currentData.stock||{};
+        currentData.history=Array.isArray(currentData.history)?currentData.history:[];
+        $("loginModal").style.display="none";
+        refreshUI();
+        setStatus("Realtime",true);
+    },e=>{
+        console.error(e);
+        setStatus("Database Error",false);
+        showLoginError("Database: "+(e.code||e.message));
+        $("loginModal").style.display="flex";
+    });
+}
+
+function saveData(){
+    if(!db||!currentRoom) return alert("Belum terhubung ke toko.");
+    db.ref(roomPath()).set(currentData).catch(e=>{
+        setStatus("Gagal menyimpan",false);
+        alert("Gagal menyimpan: "+e.message);
+    });
+}
+
+function makeLog(desc,type,box,qty){
+    currentData.history.push({desc,type,boxNumber:box,quantity:Number(qty)||0,timestamp:new Date().toISOString()});
+    if(currentData.history.length>1000) currentData.history=currentData.history.slice(-1000);
+}
+
+function formatDateTime(x){
+    const d=new Date(x);
+    return isNaN(d)?"-":d.toLocaleString("id-ID",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
+}
+
+function compressImage(u,cb){
+    const i=new Image();
+    i.onload=()=>{
+        const m=900,s=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement("canvas");
+        c.width=Math.max(1,i.width*s);
+        c.height=Math.max(1,i.height*s);
+        c.getContext("2d").drawImage(i,0,0,c.width,c.height);
+        cb(c.toDataURL("image/jpeg",.72));
+    };
+    i.onerror=()=>cb(u);
+    i.src=u;
+}
+
+function addEntryBox(){
+    const b=$("newBoxNumber").value.trim().toUpperCase(),kg=parseFloat($("newWeightIn").value);
+    if(!currentRoom) return alert("Masuk ke kode toko terlebih dahulu.");
+    if(!b||!Number.isFinite(kg)||kg<=0) return alert("Isi Nomor Box dan Berat Masuk dengan benar.");
+    
+    const id="box_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+    const finish=p=>{
+        currentData.stock[id]={boxNumber:b,weightIn:kg,weightOut:0,isCut:false,image:p||"",addedAt:new Date().toISOString()};
+        makeLog("Tambah Box "+b+" (+"+kg.toFixed(3)+" Kg)","MASUK",b,kg);
+        saveData();
+        resetAdd();
+        closeModal("addModal");
+    };
+    currentBase64Image?compressImage(currentBase64Image,finish):finish("");
+}
+
+function resetAdd(){
+    $("newBoxNumber").value="";
+    $("newWeightIn").value="";
+    $("newPhotoInput").value="";
+    $("photoPreview").classList.add("hidden");
+    $("photoStatus").textContent="Ambil Foto / Galeri";
+    currentBase64Image="";
+}
+
+function toggleCut(id,c){
+    const x=currentData.stock?.[id];
+    if(!x)return;
+    x.isCut=!!c;
+    makeLog((c?"CUT ":"Batal CUT ")+x.boxNumber,c?"CUT":"BATAL",x.boxNumber,x.weightIn);
+    saveData();
+}
+
+function toggleOut(id,c){
+    const x=currentData.stock?.[id];
+    if(!x)return;
+    x.weightOut=c?Number(x.weightIn):0;
+    makeLog((c?"OUT ":"Batal OUT ")+x.boxNumber,c?"OUT":"BATAL",x.boxNumber,c?x.weightIn:0);
+    saveData();
+}
+
+function deleteEntry(id){
+    const x=currentData.stock?.[id];
+    if(!x||!confirm("Hapus data Box "+x.boxNumber+"?"))return;
+    makeLog("Hapus Box "+x.boxNumber,"HAPUS",x.boxNumber,x.weightIn);
+    delete currentData.stock[id];
+    saveData();
+}
 
 function refreshUI(){
     let ti=0, to=0, count=0;
@@ -274,4 +389,31 @@ function refreshUI(){
 }
 
 function choosePhotoFor(id){photoTarget=id;$("newPhotoInput").click()}
-$("newPhotoInput").addEventListener("change",e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=v=>{if(photoTarget){compressImage(v.target.result,p=>{const x=currentData.stock?.[photoTarget];if(x){x.image=p;makeLog("Update foto Box "+x.boxNumber,"FOTO",x.boxNumber,0);saveData()}photoTarget=null})}else{currentBase64Image=v.target.result;$("photoPreview").src=currentBase64Image;$("photoPreview").classList.remove("hidden");$("photoStatus").textContent="Foto 
+$("newPhotoInput").addEventListener("change",e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=v=>{if(photoTarget){compressImage(v.target.result,p=>{const x=currentData.stock?.[photoTarget];if(x){x.image=p;makeLog("Update foto Box "+x.boxNumber,"FOTO",x.boxNumber,0);saveData()}photoTarget=null})}else{currentBase64Image=v.target.result;$("photoPreview").src=currentBase64Image;$("photoPreview").classList.remove("hidden");$("photoStatus").textContent="Foto berhasil dipilih"}};r.readAsDataURL(f)});
+function renderHistory(){const list=$("historyList"),f=$("historyDate").value;list.innerHTML="";const a=(currentData.history||[]).filter(x=>!f||String(x.timestamp).slice(0,10)===f).slice().reverse();$("emptyHistory").classList.toggle("hidden",a.length!==0);a.forEach(x=>{const d=document.createElement("div");d.className="history-row grid grid-cols-5 gap-2 px-3 py-3 border-t border-[#1b2d3d] text-xs sm:text-sm";d.innerHTML=`<div class="text-slate-300">${esc(formatDateTime(x.timestamp))}</div><div class="font-semibold">${esc(x.boxNumber||"-")}</div><div><span class="px-2 py-1 rounded-md ${x.type==='OUT'?'bg-red-900/50 red':'bg-green-900/50 green'} border border-current">${esc(x.type||'INFO')}</span></div><div>${(+x.quantity||0).toFixed(3)} Kg</div><div class="text-slate-400">${esc(x.desc||"")}</div>`;list.appendChild(d)})}
+function clearHistory(){if(!confirm("Hapus semua histori transaksi?"))return;currentData.history=[];saveData()}
+function showImage(e){$("modalImage").src=decodeURIComponent(e);openModal("imageModal")}
+function openModal(id){$(id).style.display="flex"}
+function closeModal(id){$(id).style.display="none"}
+function goTo(id){$(id).scrollIntoView({behavior:"smooth",block:"start"})}
+function showAbout(){alert("STORE IKAN\nCatatan Stok Realtime\nData tersimpan melalui Firebase Realtime Database.")}
+function shareCode(){if(!currentRoom)return;const t="Gunakan kode toko: "+currentRoom;if(navigator.share)navigator.share({title:"STORE IKAN",text:t,url:location.href}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert("Kode toko disalin: "+currentRoom));else alert(t)}
+function toggleMenu(){alert("STORE IKAN\nGunakan navigasi bawah untuk Stok, Histori, Kode Toko, dan Tentang.")}
+
+$("historyDate").addEventListener("change",renderHistory);
+$("searchInput").addEventListener("input",refreshUI);
+$("loginRoomCode").addEventListener("keydown",e=>{if(e.key==='Enter')joinRoom()});
+window.addEventListener("load",()=>{
+    const s=localStorage.getItem("fishStoreRoomCode");
+    if(s){
+        $("loginRoomCode").value=s;
+        joinRoom();
+    }else{
+        $("loginModal").style.display="flex";
+    }
+});
+window.addEventListener("online",()=>$("deviceText").textContent="Online");
+window.addEventListener("offline",()=>{$("deviceText").textContent="Offline";setStatus("Internet terputus",false)});
+</script>
+</body>
+</html>
