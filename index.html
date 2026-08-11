@@ -19,100 +19,133 @@
         .btn{border:1px solid #2d4960;background:#0b1723;color:#eaf2f8;border-radius:10px}
         .table-scroll{overflow-x:auto}
         .history-row{min-width:760px}
+        .page-section{display:none}
+        .page-section.active{display:block}
+        
+        /* Animasi Header Menyusut saat Scroll */
+        .collapsible-header {
+            transition: all 0.3s ease-in-out;
+            max-height: 250px;
+            overflow: hidden;
+            opacity: 1;
+        }
+        .collapsible-header.shrink {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            opacity: 0;
+            border-width: 0;
+        }
+
+        /* Ukuran Foto Diperbesar (Square / Persegi Besar) */
+        .fish-photo {
+            width: 140px;
+            height: 140px;
+            object-fit: cover;
+        }
+
         @media(max-width:640px){
             .dashboard-container{padding:10px 10px 82px}
-            .top-title{font-size:24px}
+            .top-title{font-size:20px}
             .summary-grid{grid-template-columns:1fr 1fr}
-            .fish-actions{width:155px}
-            .fish-photo{width:105px;height:78px}
+            .fish-actions{width:100%}
+            .fish-photo {
+                width: 100%;
+                height: 220px;
+            }
         }
     </style>
 </head>
 <body>
 <div class="dashboard-container">
-    <header class="glass rounded-2xl p-3 sm:p-4 mb-3 flex items-center justify-between gap-3 sticky top-2 z-50">
-        <button onclick="toggleMenu()" class="btn w-12 h-12 text-xl flex items-center justify-center"><i class="fas fa-bars"></i></button>
+    <header id="mainHeader" class="glass rounded-2xl p-3 sm:p-4 mb-3 flex items-center justify-between gap-3 sticky top-2 z-50 collapsible-header">
+        <button onclick="toggleMenu()" class="btn w-10 h-10 sm:w-12 sm:h-12 text-lg sm:text-xl flex items-center justify-center"><i class="fas fa-bars"></i></button>
         <div class="text-center flex-1">
-            <h1 class="top-title text-3xl font-extrabold tracking-wide">🐟 STORE IKAN 🐟</h1>
-            <p class="green text-sm sm:text-base">Catatan Stok Realtime</p>
+            <h1 class="top-title text-2xl sm:text-3xl font-extrabold tracking-wide">🐟 STORE IKAN 🐟</h1>
+            <p class="green text-xs sm:text-base">Catatan Stok Realtime</p>
         </div>
         <div class="flex items-center gap-2">
-            <button id="notifBtn" onclick="requestNotifPermission()" class="btn w-10 h-10 text-sm flex items-center justify-center text-yellow-400" title="Aktifkan Notifikasi"><i class="fas fa-bell"></i></button>
-            <div id="wifiIcon" class="green text-2xl sm:text-3xl w-8 text-center"><i class="fas fa-wifi"></i></div>
+            <button id="notifBtn" onclick="requestNotifPermission()" class="btn w-9 h-9 sm:w-10 sm:h-10 text-sm flex items-center justify-center text-yellow-400" title="Aktifkan Notifikasi"><i class="fas fa-bell"></i></button>
+            <div id="wifiIcon" class="green text-xl sm:text-3xl w-7 sm:w-8 text-center"><i class="fas fa-wifi"></i></div>
         </div>
     </header>
 
-    <section class="summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-        <div class="glass rounded-2xl p-4">
-            <p class="text-sm text-slate-300">Total Box</p>
-            <div class="flex items-center gap-3 mt-2">
-                <div class="w-11 h-11 rounded-xl bg-blue-900/60 flex items-center justify-center text-blue-300 text-xl"><i class="fas fa-boxes-stacked"></i></div>
-                <div>
-                    <div id="totalBox" class="text-3xl font-bold blue">0</div>
-                    <div class="text-xs blue">Item</div>
+    <!-- HALAMAN RINGKASAN / TOTAL -->
+    <section id="summarySection" class="page-section mb-5">
+        <h2 class="text-xl font-bold mb-3">RINGKASAN JUMLAH TOTAL</h2>
+        <div class="summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="glass rounded-2xl p-4">
+                <p class="text-sm text-slate-300">Total Box</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <div class="w-11 h-11 rounded-xl bg-blue-900/60 flex items-center justify-center text-blue-300 text-xl"><i class="fas fa-boxes-stacked"></i></div>
+                    <div>
+                        <div id="totalBox" class="text-3xl font-bold blue">0</div>
+                        <div class="text-xs blue">Item</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="glass rounded-2xl p-4">
-            <p class="text-sm text-slate-300">Total Stok</p>
-            <div class="flex items-center gap-3 mt-2">
-                <div class="w-11 h-11 rounded-xl bg-green-900/60 flex items-center justify-center text-green-300 text-xl"><i class="fas fa-fish"></i></div>
-                <div>
-                    <div id="stokKg" class="text-3xl font-bold green">0.000</div>
-                    <div class="text-xs green">Kg</div>
+            <div class="glass rounded-2xl p-4">
+                <p class="text-sm text-slate-300">Total Stok</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <div class="w-11 h-11 rounded-xl bg-green-900/60 flex items-center justify-center text-green-300 text-xl"><i class="fas fa-fish"></i></div>
+                    <div>
+                        <div id="stokKg" class="text-3xl font-bold green">0.000</div>
+                        <div class="text-xs green">Kg</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="glass rounded-2xl p-4">
-            <p class="text-sm text-slate-300">Total Masuk</p>
-            <div class="flex items-center gap-3 mt-2">
-                <div class="w-11 h-11 rounded-xl bg-blue-900/60 flex items-center justify-center text-blue-300 text-xl"><i class="fas fa-arrow-down"></i></div>
-                <div>
-                    <div id="totalIn" class="text-3xl font-bold blue">0.000</div>
-                    <div class="text-xs blue">Kg</div>
+            <div class="glass rounded-2xl p-4">
+                <p class="text-sm text-slate-300">Total Masuk</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <div class="w-11 h-11 rounded-xl bg-blue-900/60 flex items-center justify-center text-blue-300 text-xl"><i class="fas fa-arrow-down"></i></div>
+                    <div>
+                        <div id="totalIn" class="text-3xl font-bold blue">0.000</div>
+                        <div class="text-xs blue">Kg</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="glass rounded-2xl p-4">
-            <p class="text-sm text-slate-300">Total Keluar</p>
-            <div class="flex items-center gap-3 mt-2">
-                <div class="w-11 h-11 rounded-xl bg-red-900/60 flex items-center justify-center text-red-300 text-xl"><i class="fas fa-arrow-up"></i></div>
-                <div>
-                    <div id="totalOut" class="text-3xl font-bold red">0.000</div>
-                    <div class="text-xs red">Kg</div>
+            <div class="glass rounded-2xl p-4">
+                <p class="text-sm text-slate-300">Total Keluar</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <div class="w-11 h-11 rounded-xl bg-red-900/60 flex items-center justify-center text-red-300 text-xl"><i class="fas fa-arrow-up"></i></div>
+                    <div>
+                        <div id="totalOut" class="text-3xl font-bold red">0.000</div>
+                        <div class="text-xs red">Kg</div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="glass rounded-2xl p-4">
-            <p class="text-sm text-slate-300">Sudah CUT (Total)</p>
-            <div class="flex items-center gap-3 mt-2">
-                <div class="w-11 h-11 rounded-xl bg-green-900/60 flex items-center justify-center text-green-300 text-xl"><i class="fas fa-scissors"></i></div>
-                <div>
-                    <div id="totalCutBox" class="text-3xl font-bold green">0</div>
-                    <div class="text-xs green"><span id="totalCutKg">0.000</span> Kg</div>
+            <div class="glass rounded-2xl p-4">
+                <p class="text-sm text-slate-300">Sudah CUT (Total)</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <div class="w-11 h-11 rounded-xl bg-green-900/60 flex items-center justify-center text-green-300 text-xl"><i class="fas fa-scissors"></i></div>
+                    <div>
+                        <div id="totalCutBox" class="text-3xl font-bold green">0</div>
+                        <div class="text-xs green"><span id="totalCutKg">0.000</span> Kg</div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="glass rounded-2xl p-4 border border-cyan-500/30">
-            <p class="text-sm text-cyan-300 font-semibold">CUT Belum OUT</p>
-            <div class="flex items-center gap-3 mt-2">
-                <div class="w-11 h-11 rounded-xl bg-cyan-900/60 flex items-center justify-center text-cyan-300 text-xl"><i class="fas fa-box-archive"></i></div>
-                <div>
-                    <div id="totalCutNotOutBox" class="text-3xl font-bold cyan">0</div>
-                    <div class="text-xs cyan"><span id="totalCutNotOutKg">0.000</span> Kg</div>
+            <div class="glass rounded-2xl p-4 border border-cyan-500/30">
+                <p class="text-sm text-cyan-300 font-semibold">CUT Belum OUT</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <div class="w-11 h-11 rounded-xl bg-cyan-900/60 flex items-center justify-center text-cyan-300 text-xl"><i class="fas fa-box-archive"></i></div>
+                    <div>
+                        <div id="totalCutNotOutBox" class="text-3xl font-bold cyan">0</div>
+                        <div class="text-xs cyan"><span id="totalCutNotOutKg">0.000</span> Kg</div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="glass rounded-2xl p-4">
-            <p class="text-sm text-slate-300">Belum CUT</p>
-            <div class="flex items-center gap-3 mt-2">
-                <div class="w-11 h-11 rounded-xl bg-yellow-900/60 flex items-center justify-center text-yellow-300 text-xl"><i class="fas fa-box-open"></i></div>
-                <div>
-                    <div id="totalUncutBox" class="text-3xl font-bold yellow">0</div>
-                    <div class="text-xs yellow"><span id="totalUncutKg">0.000</span> Kg</div>
+            <div class="glass rounded-2xl p-4">
+                <p class="text-sm text-slate-300">Belum CUT</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <div class="w-11 h-11 rounded-xl bg-yellow-900/60 flex items-center justify-center text-yellow-300 text-xl"><i class="fas fa-box-open"></i></div>
+                    <div>
+                        <div id="totalUncutBox" class="text-3xl font-bold yellow">0</div>
+                        <div class="text-xs yellow"><span id="totalUncutKg">0.000</span> Kg</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -124,7 +157,8 @@
         <div>Perangkat: <b id="deviceText" class="green">Online</b></div>
     </section>
 
-    <section id="stockSection" class="mb-5">
+    <!-- HALAMAN STOK -->
+    <section id="stockSection" class="page-section active mb-5">
         <div class="flex items-center justify-between mb-2">
             <h2 class="text-xl font-bold">DAFTAR STOK IKAN</h2>
             <button onclick="openModal('addModal')" class="btn px-4 py-2 green"><i class="fas fa-plus"></i> Tambah</button>
@@ -137,12 +171,13 @@
                 </div>
                 <button onclick="refreshUI()" class="btn px-4"><i class="fas fa-rotate"></i></button>
             </div>
-            <div id="stockList" class="space-y-2"></div>
+            <div id="stockList" class="space-y-3"></div>
             <div id="emptyStock" class="text-center text-slate-500 py-10 hidden">Belum ada data stok.</div>
         </div>
     </section>
 
-    <section id="historySection" class="mb-5">
+    <!-- HALAMAN HISTORI -->
+    <section id="historySection" class="page-section mb-5">
         <div class="flex items-center justify-between gap-2 mb-2">
             <h2 class="text-xl font-bold">HISTORI TRANSAKSI</h2>
             <div class="flex gap-2">
@@ -165,20 +200,25 @@
         </div>
     </section>
 
-    <section id="codeSection" class="glass rounded-2xl p-4 mb-5">
-        <div class="flex flex-col sm:flex-row items-center gap-3">
-            <label class="font-bold whitespace-nowrap">Kode Toko:</label>
-            <input id="roomCodeInput2" maxlength="30" class="flex-1 w-full bg-[#06111c] border border-[#22384c] rounded-xl px-4 py-3 outline-none uppercase" placeholder="Contoh: 888">
-            <button onclick="saveRoomCode()" class="btn px-6 py-3 green font-bold w-full sm:w-auto"><i class="fas fa-lock"></i> Simpan</button>
-            <button onclick="shareCode()" class="btn px-5 py-3 blue font-bold w-full sm:w-auto"><i class="fas fa-share-alt"></i> Bagikan</button>
+    <!-- HALAMAN KODE TOKO -->
+    <section id="codeSection" class="page-section mb-5">
+        <div class="glass rounded-2xl p-4">
+            <h2 class="text-xl font-bold mb-3">PENGATURAN KODE TOKO</h2>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <label class="font-bold whitespace-nowrap">Kode Toko:</label>
+                <input id="roomCodeInput2" maxlength="30" class="flex-1 w-full bg-[#06111c] border border-[#22384c] rounded-xl px-4 py-3 outline-none uppercase" placeholder="Contoh: 888">
+                <button onclick="saveRoomCode()" class="btn px-6 py-3 green font-bold w-full sm:w-auto"><i class="fas fa-lock"></i> Simpan</button>
+                <button onclick="shareCode()" class="btn px-5 py-3 blue font-bold w-full sm:w-auto"><i class="fas fa-share-alt"></i> Bagikan</button>
+            </div>
         </div>
     </section>
 
     <nav class="fixed bottom-0 left-0 right-0 z-50 max-w-[1000px] mx-auto px-2 pb-2">
-        <div class="glass rounded-2xl grid grid-cols-4 overflow-hidden">
-            <button onclick="goTo('stockSection')" class="py-3 green"><i class="fas fa-house text-lg"></i><span class="block text-xs">Stok</span></button>
-            <button onclick="goTo('historySection')" class="py-3 text-slate-300"><i class="fas fa-clock text-lg"></i><span class="block text-xs">Histori</span></button>
-            <button onclick="goTo('codeSection')" class="py-3 text-slate-300"><i class="fas fa-key text-lg"></i><span class="block text-xs">Kode Toko</span></button>
+        <div class="glass rounded-2xl grid grid-cols-5 overflow-hidden text-center">
+            <button id="navStock" onclick="switchPage('stockSection')" class="py-3 green"><i class="fas fa-house text-lg"></i><span class="block text-xs">Stok</span></button>
+            <button id="navSummary" onclick="switchPage('summarySection')" class="py-3 text-slate-300"><i class="fas fa-chart-pie text-lg"></i><span class="block text-xs">Total</span></button>
+            <button id="navHistory" onclick="switchPage('historySection')" class="py-3 text-slate-300"><i class="fas fa-clock text-lg"></i><span class="block text-xs">Histori</span></button>
+            <button id="navCode" onclick="switchPage('codeSection')" class="py-3 text-slate-300"><i class="fas fa-key text-lg"></i><span class="block text-xs">Kode</span></button>
             <button onclick="showAbout()" class="py-3 text-slate-300"><i class="fas fa-circle-info text-lg"></i><span class="block text-xs">Tentang</span></button>
         </div>
     </nav>
@@ -198,7 +238,7 @@
         <input id="newPhotoInput" type="file" accept="image/*" class="hidden">
         
         <div id="photoStatusText" class="text-xs text-center text-slate-400 mb-2">Belum ada foto dipilih</div>
-        <img id="photoPreview" class="hidden w-full h-40 object-cover rounded-xl mb-3 border border-slate-700">
+        <img id="photoPreview" class="hidden w-full h-48 object-cover rounded-xl mb-3 border border-slate-700">
         
         <div class="grid grid-cols-2 gap-2">
             <button onclick="closeModal('addModal')" class="btn py-3">Batal</button>
@@ -257,7 +297,7 @@ try {
 
 const $ = id => document.getElementById(id);
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-2xl sm:text-3xl w-8 text-center":"red text-2xl sm:text-3xl w-8 text-center"}
+function setStatus(t,ok=true){$("statusText").textContent=t;$("statusText").className=ok?"green font-bold":"red font-bold";$("wifiIcon").innerHTML=ok?'<i class="fas fa-wifi"></i>':'<i class="fas fa-wifi-slash"></i>';$("wifiIcon").className=ok?"green text-xl sm:text-3xl w-7 sm:w-8 text-center":"red text-xl sm:text-3xl w-7 sm:w-8 text-center"}
 function roomPath(){return "rooms/" + currentRoom;}
 
 function openModal(id){
@@ -269,6 +309,33 @@ function closeModal(id){
     if(el){ el.classList.remove("flex"); el.classList.add("hidden"); }
 }
 
+function switchPage(pageId){
+    document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+    $(pageId).classList.add('active');
+    
+    ['navStock', 'navSummary', 'navHistory', 'navCode'].forEach(btnId => {
+        const b = $(btnId);
+        if(b) {
+            b.className = "py-3 text-slate-300";
+            b.querySelector("i").className = b.querySelector("i").className.replace(" green", "");
+        }
+    });
+    
+    let activeBtnId = '';
+    if(pageId === 'stockSection') activeBtnId = 'navStock';
+    else if(pageId === 'summarySection') activeBtnId = 'navSummary';
+    else if(pageId === 'historySection') activeBtnId = 'navHistory';
+    else if(pageId === 'codeSection') activeBtnId = 'navCode';
+    
+    if(activeBtnId) {
+        const ab = $(activeBtnId);
+        if(ab) {
+            ab.className = "py-3 green";
+        }
+    }
+    window.scrollTo({top:0, behavior:'smooth'});
+}
+
 function requestNotifPermission(){
     if(!("Notification" in window)){
         alert("Browser ini tidak mendukung notifikasi sistem.");
@@ -278,106 +345,18 @@ function requestNotifPermission(){
         if(permission==="granted"){
             $("notifBtn").classList.replace("text-yellow-400","text-green-400");
             sendNotification("Notifikasi Aktif","Anda akan menerima update transaksi stok.");
+        } else {
+            alert("Izin notifikasi ditolak. Harap izinkan melalui pengaturan browser.");
         }
+    }).catch(err => {
+        console.error("Notification permission error:", err);
     });
 }
 
 function sendNotification(title, body){
     if("Notification" in window && Notification.permission==="granted"){
         try {
-            new Notification(title, {
-                body: body,
-                icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png"
-            });
-        } catch(e) {
-            if(navigator.serviceWorker && navigator.serviceWorker.ready){
-                navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,{body, icon: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png"}));
-            }
-        }
-    }
-}
-
-// LOGIN / MASUK KODE TOKO
-function joinRoom(){
-    const inputEl = $("loginRoomCode");
-    let code = inputEl ? inputEl.value.trim().toUpperCase() : "";
-    code = code.replace(/[^a-zA-Z0-9_\-]/g, "");
-    
-    if(!code){
-        alert("Silakan ketik kode toko terlebih dahulu!");
-        return;
-    }
-    
-    currentRoom = code;
-    localStorage.setItem("fishStoreRoomCode", code);
-    $("roomCodeInput2").value = code;
-    $("roomDisplay").textContent = code;
-    
-    // Langsung tutup modal login
-    closeModal("loginModal");
-    
-    isInitialLoad = true;
-    subscribe();
-}
-
-function saveRoomCode(){
-    let c = $("roomCodeInput2").value.trim().toUpperCase();
-    c = c.replace(/[^a-zA-Z0-9_\-]/g, "");
-    if(!c) return alert("Kode toko tidak boleh kosong!");
-    currentRoom = c;
-    localStorage.setItem("fishStoreRoomCode", c);
-    $("loginRoomCode").value = c;
-    $("roomDisplay").textContent = c;
-    isInitialLoad = true;
-    subscribe();
-    alert("Kode toko tersambung: " + c);
-}
-
-function subscribe(){
-    if(!db || !currentRoom) return setStatus("Database terputus", false);
-    setStatus("Menghubungkan...", false);
-    
-    db.ref(roomPath()).off();
-    db.ref(roomPath()).on("value", s => {
-        const val = s.val() || {};
-        const newData = {
-            stock: val.stock || {},
-            history: Array.isArray(val.history) ? val.history : (val.history ? Object.values(val.history) : [])
-        };
-        
-        if(!isInitialLoad && newData.history.length > (currentData.history||[]).length){
-            const latest = newData.history[newData.history.length - 1];
-            if(latest){
-                sendNotification("Update Stok: " + latest.type, `${latest.desc} (${latest.quantity} Kg)`);
-            }
-        }
-        
-        currentData = newData;
-        isInitialLoad = false;
-        refreshUI();
-        setStatus("Realtime", true);
-    }, e => {
-        console.error(e);
-        setStatus("Offline/Gagal", false);
-    });
-}
-
-function saveData(){
-    if(!db || !currentRoom) return alert("Belum terhubung ke kode toko.");
-    db.ref(roomPath()).set(currentData).catch(e => {
-        setStatus("Gagal menyimpan", false);
-        alert("Gagal menyimpan data: " + e.message);
-    });
-}
-
-function makeLog(desc,type,box,qty){
-    currentData.history.push({desc,type,boxNumber:box,quantity:Number(qty)||0,timestamp:new Date().toISOString()});
-    if(currentData.history.length > 1000) currentData.history = currentData.history.slice(-1000);
-}
-
-function formatDateTime(x){
-    const d = new Date(x);
-    return isNaN(d) ? "-" : d.toLocaleString("id-ID",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
-}
-
-function compressImage(u
+            if(navigator.serviceWorker && navigator.serviceWorker.controller){
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, {
+             
